@@ -1,0 +1,64 @@
+    
+    
+        /*
+    // callback function needs to be static?
+    static void MyCallbackForThreshold(int, void*)
+    {
+        Canny( detected_edges, detected_edges, lowThreshold, highThreshold, kernel_size ); // reference su high o low threshold, quindi solo quello viene modificato
+        dst = Scalar::all(0);
+        src.copyTo( dst, 	// Destination matrix
+		    detected_edges);	// Operation mask. It's non-zero elements indicate which matrix elements need to be copied.
+        imshow( window_name, dst );
+    }
+    */
+
+    /*
+    static void MyCallbackForHighThreshold(int, void*)
+    {
+        Canny( detected_edges, detected_edges, lowThreshold, highThreshold, kernel_size ); // reference su highThreshold, quindi solo quello viene modificato
+        dst = Scalar::all(0);
+        src.copyTo( dst, detected_edges);
+        imshow( window_name, dst );
+    }
+    */	
+    
+    
+    
+    // Draw the lines
+    for( size_t i = 0; i < lines.size(); i++ )
+    {
+        float rho = lines[i][0], theta = lines[i][1];
+        cv::Point pt1, pt2;
+        double x0 = rho * cos(theta), y0 = rho * sin(theta);
+        pt1.x = cvRound(x0 + 1000*(-sin(theta)));
+        pt1.y = cvRound(y0 + 1000*(cos(theta)));
+        pt2.x = cvRound(x0 - 1000*(-sin(theta)));
+        pt2.y = cvRound(y0 - 1000*(cos(theta)));
+        cv::line( imgOriginal, pt1, pt2, cv::Scalar(0,0,255), 3, cv::LINE_AA);
+    }
+    
+    
+    
+    	/*
+	//_____________________________________________ Hough Transform Circles _____________________________________________
+    // Create a vector for detected circles
+	vector<Vec3f>  circles;
+	
+	// Apply Hough Transform
+	HoughCircles(img_blur, 
+		circles, 		// Each vector is encoded as 3 or 4 element floating-point vector (x,y,radius) or (x,y,radius,votes)
+		HOUGH_GRADIENT, 
+		1, 
+		img.rows/64, 
+		200, 
+		10, 
+		5, 
+		30);
+	
+	// Draw detected circles
+	for(size_t i=0; i<circles.size(); i++) {
+	    Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+	    int radius = cvRound(circles[i][2]);
+	    circle(img, center, radius, Scalar(255, 255, 255), 2, 8, 0);
+	}
+    */
