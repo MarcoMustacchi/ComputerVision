@@ -1,6 +1,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include "opencv2/imgproc.hpp"
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 
 using namespace cv;
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     
     std::cout << "Number of features found: " << nFeatures << std::endl;
     
-	cv::namedWindow("Harris Corner");
+	cv::namedWindow("Harris Corner"); //added comment test
 	cv::imshow("Harris Corner", img);
 	cv::waitKey(0);
 	
