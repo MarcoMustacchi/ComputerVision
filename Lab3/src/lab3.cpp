@@ -51,6 +51,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* param)
 	    cv::namedWindow("Mask", cv::WINDOW_AUTOSIZE);
 	    cv::imshow("Mask", mask);
         
+        cv::imwrite("../images/results/callback_function_segmentation_mask.jpg", mask);
         
         // std::cout << mask.at<uchar>(y, x) << std::endl;
         std::cout << "x: " << x << std::endl;
@@ -104,9 +105,7 @@ int main(int argc, char** argv)
     cv::imshow("My Window", img);     //show the image
     cv::destroyWindow("Mask");
     // Wait until user press some key
-    cv::waitKey(0);
-    
-    cv::imwrite("../images/results/callback_function_segmentation.jpg", img);    
+    cv::waitKey(0);    
      
     return 0;
 }
