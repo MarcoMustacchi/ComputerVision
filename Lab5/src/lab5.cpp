@@ -104,7 +104,10 @@ int main(int argc, char** argv)
     cv::imshow("Otsu's thresholding", img_thr2);
 	cv::imshow("Otsu's thresholding after Gaussian filtering", img_thr3);
 	cv::waitKey(0);
-
+    
+    cv::imwrite("../images/results/global_thresholding.jpg", img_thr1);
+    cv::imwrite("../images/results/otsu_thresholding.jpg", img_thr2);
+    cv::imwrite("../images/results/otsu_thresholding_with_gaussian_filter.jpg", img_thr3);
     	
     return 0;
 }

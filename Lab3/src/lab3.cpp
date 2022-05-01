@@ -105,6 +105,8 @@ int main(int argc, char** argv)
     cv::destroyWindow("Mask");
     // Wait until user press some key
     cv::waitKey(0);
+    
+    cv::imwrite("../images/results/callback_function_segmentation.jpg", img);    
      
     return 0;
 }

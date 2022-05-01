@@ -144,8 +144,9 @@ int main(int argc, char** argv)
     rot_dst.copyTo(inputAll(subImageROI));
 
     cv::imshow("Trasformations", inputAll);
-    
     cv::waitKey(0);
+    
+    cv::imwrite("../images/results/transformations_image.jpg", inputAll);    
         
     return 0;
 }

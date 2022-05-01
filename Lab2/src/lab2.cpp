@@ -77,17 +77,36 @@ int main(int argc, char** argv)
     int ksize = 3;
     
     cv::Mat testMax = maxFilter(img, ksize);
-    cv::imshow("Max filter Image" , testMax);
-    
     cv::Mat testMin = minFilter(img, ksize);
-    cv::imshow("Min filter Image" , testMin);
     
     cv::Mat medianFilter;
     cv::medianBlur(img, medianFilter, 15);
-    cv::imshow("Median filter Image" , medianFilter);
     
     cv::Mat gaussianFilter;
     cv::GaussianBlur(img, gaussianFilter, cv::Size(5, 5), 0);
+
+    std::vector<cv::Mat> filter_image;
+    
+    filter_image.push_back(img);
+    filter_image.push_back(testMax);
+    filter_image.push_back(testMin);
+    filter_image.push_back(medianFilter);
+    filter_image.push_back(gaussianFilter);
+    
+    std::cout << filter_image.size() << std::endl;
+    
+	for (int i = 0; i < filter_image.size(); i++)
+	{
+        if (i==0) { cv::putText(filter_image[i], "Original", cv::Point(10, 40), cv::FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(255, 0, 0), 2); }
+        else if (i==1) { cv::putText(filter_image[i], "Filter: Max", cv::Point(10, 40), cv::FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(255, 0, 0), 2); }
+        else if (i==2) { cv::putText(filter_image[i], "Filter: Min", cv::Point(10, 40), cv::FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(255, 0, 0), 2); }
+        else if (i==3) { cv::putText(filter_image[i], "Filter: Median", cv::Point(10, 40), cv::FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(255, 0, 0), 2); }
+        else { cv::putText(filter_image[i], "Filter: Gaussian", cv::Point(10, 40), cv::FONT_HERSHEY_DUPLEX, 1.0, CV_RGB(255, 0, 0), 2); }
+	}
+	
+    cv::imshow("Max filter Image" , testMax);
+    cv::imshow("Min filter Image" , testMin);
+    cv::imshow("Median filter Image" , medianFilter);
     cv::imshow("Gaussian smoothing Image" , gaussianFilter);
     
     cv::destroyAllWindows();
@@ -126,6 +145,8 @@ int main(int argc, char** argv)
     cv::imshow("Trasformations", inputAll);
     
     cv::waitKey(0);
+    
+    cv::imwrite("../images/results/filter_image.jpg", inputAll);    
     
     //####################(  Erosion and Dilation  )##########################
     cv::Mat im_gray;

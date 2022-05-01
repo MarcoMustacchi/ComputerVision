@@ -44,7 +44,6 @@ int main(int argc, char** argv)
 	detector.release();
 
 	// Find descriptors.
-
 	cv::Mat descriptors_base_image;
 	cv::Mat descriptors_locate_image;
 
@@ -56,46 +55,80 @@ int main(int argc, char** argv)
 	extractor.release();
 
 	// Create Brute-Force Matcher. Other Algorithms are 'non-free'.
-	cv::BFMatcher brue_force_matcher = cv::BFMatcher(cv::NORM_HAMMING, true);
+	cv::BFMatcher brute_force_matcher = cv::BFMatcher(cv::NORM_HAMMING, true);
 
 
 	// Vector where matches will be stored.
 	std::vector< cv::DMatch > matches;
 
 	// Find matches and store in matches vector.
-	brue_force_matcher.match((const cv::OutputArray)descriptors_base_image, (const cv::OutputArray)descriptors_locate_image,  matches);
+	brute_force_matcher.match((const cv::OutputArray)descriptors_base_image, (const cv::OutputArray)descriptors_locate_image,  matches);
 
 	// Sort them in order of their distance. The less distance, the better.
 	sort_matches_increasing(matches);
-
-	if (matches.size() > 10)
+    
+    /*
+	if (matches.size() > 30)
 	{
-		matches.resize(10);
+		matches.resize(30);
 	}
+    */
+    
+    //***********************************************************//
+    
+    double max_dist = 0; double min_dist = 100;
 
-	// Draw the first 10 matches
+    //-- Quick calculation of max and min distances between keypoints
+    for( int i = 0; i < descriptors_base_image.rows; i++ )
+    { 
+        double dist = matches[i].distance;
+        if( dist < min_dist ) 
+            min_dist = dist;
+        if( dist > max_dist ) 
+            max_dist = dist;
+    }
+
+    printf("-- Max dist : %f \n", max_dist );
+    printf("-- Min dist : %f \n", min_dist );
+
+    //-- Draw only "good" matches (i.e. whose distance is less than 3*min_dist )
+    std::vector< cv::DMatch > good_matches;
+
+    for( int i = 0; i < descriptors_base_image.rows; i++ )
+    { 
+        if( matches[i].distance < 5*min_dist )
+            good_matches.push_back( matches[i]); 
+    }
+    
+    //***********************************************************//
+    
+	// Draw the first 30 matches
 	cv::Mat output_image;
 
 	std::cout << "Keypoints Base Size:" << keypoints_base_image.size() << std::endl
 			  << "Keypoints Locate Size:" << keypoints_locate_image.size() << std::endl
-			  << "Matches Size:" << matches.size() << std::endl;
+			  << "Matches Size:" << matches.size() << std::endl
+			  << "Good Matches Size:" << good_matches.size() << std::endl;
 
-	std::cout << "First "<< matches.size() <<" Match Distance's:" << std::endl;
-	for (int i = 0; i < matches.size(); i++)
+	std::cout << "First "<< good_matches.size() <<" Match Distance's:" << std::endl;
+	
+	for (int i = 0; i < good_matches.size(); i++)
 	{
-		std::cout << matches[i].distance << ", ";
+		std::cout << good_matches[i].distance << ", ";
 	}
 	std::cout << std::endl;
 
 	cv::drawMatches(
 					base_image, keypoints_base_image,
 					locate_image, keypoints_locate_image,
-					matches,
-					output_image);
+					good_matches,
+					output_image
+					);
 
 	cv::imshow("Matches", output_image);
-
 	cv::waitKey(0);
+	
+	cv::imwrite("../images/results/feature_matching.jpg", output_image);
 
 	return 0;
 	
