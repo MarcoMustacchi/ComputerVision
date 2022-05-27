@@ -22,6 +22,10 @@ include_directories( ${OpenCV_INCLUDE_DIRS}
                    )
 add_executable( ${PROJECT_NAME} 
                 ${SRC_FILES}/lab7.cpp
+                ${HEADER_FILES}/panoramic_utils.h
+                ${LIB_FILES}/panoramic_utils.cpp
+                ${HEADER_FILES}/PanoramicImage.h
+                ${LIB_FILES}/PanoramicImage.cpp
               )  # be sure there's exactly one main() function in the source files
 #target_include_directories( ${PROJECT_NAME} PUBLIC ${HEADER_FILES}/filters.h) # attenzione, viene letto sequenziale, target_include_directories must be defined after the add_executable
 target_link_libraries( ${PROJECT_NAME} PUBLIC ${OpenCV_LIBS} )

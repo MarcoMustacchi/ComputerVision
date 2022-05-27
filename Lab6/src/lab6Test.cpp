@@ -27,8 +27,8 @@ int main(int argc, char** argv)
 	/* Orb Stuff */
 
 	// Load Base and Locate image
-	cv::Mat base_image   = cv::imread("../images/all_souls_000002.jpg", cv::IMREAD_GRAYSCALE);
-	cv::Mat locate_image = cv::imread("../images/all_souls_000006.jpg", cv::IMREAD_GRAYSCALE);
+	cv::Mat base_image   = cv::imread("../images/all_souls_000002.jpg");
+	cv::Mat locate_image = cv::imread("../images/all_souls_000006.jpg");
 
 	// Initiate ORB Detector Class within pointer.
 	cv::Ptr<cv::FeatureDetector> detector = cv::ORB::create();
