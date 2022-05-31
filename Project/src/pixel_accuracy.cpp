@@ -13,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include "write_to_file.h"
 
 
 
@@ -69,6 +70,8 @@ void pixel_accuracy(cv::Mat mask, cv::Mat mask_otsu, int x, int y, int width, in
     float pixelAccuracy = (float) totCorrect / totArea;
     
     std::cout << "Pixel accuracy is: " << pixelAccuracy << std::endl;
+	
+	write_to_file(pixelAccuracy);
 	
 }
 

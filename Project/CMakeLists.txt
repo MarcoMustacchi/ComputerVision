@@ -15,13 +15,15 @@ set(HEADER_FILES
    )
 
 cmake_minimum_required(VERSION 2.8)
-project( pixelAccuracy )
+project( pixel )
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} 
                      ${HEADER_FILES}
                    )
 add_executable( ${PROJECT_NAME} 
                 ${SRC_FILES}/pixel_accuracy.cpp
+                ${HEADER_FILES}/write_to_file.h
+                ${LIB_FILES}/write_to_file.cpp
               )  # be sure there's exactly one main() function in the source files
 #target_include_directories( ${PROJECT_NAME} PUBLIC ${HEADER_FILES}/filters.h) # attenzione, viene letto sequenziale, target_include_directories must be defined after the add_executable
 target_link_libraries( ${PROJECT_NAME} PUBLIC ${OpenCV_LIBS} )

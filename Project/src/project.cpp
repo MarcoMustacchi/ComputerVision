@@ -37,6 +37,37 @@ std::vector<int> read_numbers(std::string file_name)
     return numbers;
 }
 
+
+void otsuSegmentation(const cv::Mat& input, cv::Mat& mask, const int ksize, int color_space) 
+{
+
+    cv::Mat gray, temp;
+    
+    if (color_space == 1) {
+        cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
+    } else if (color_space == 2) {
+        cv::Mat hsv_channels[3];
+        cv::split( input, hsv_channels );
+        gray = hsv_channels[2]; // 3 channel of HSV is gray
+    } else {
+        cv::Mat ycbcr_channels[3];
+        cv::split( input, ycbcr_channels );
+        gray = ycbcr_channels[0]; // 3 channel of HSV is gray
+    }
+    
+    cv::blur(gray, temp, cv::Size(ksize, ksize));
+
+    double th = cv::threshold(temp, mask, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+    
+    std::cout << "Otsu method threshold after Gaussian Filter: " << th << std::endl;
+    
+    cv::namedWindow("Otsu's thresholding after Gaussian filtering");
+	cv::imshow("Otsu's thresholding after Gaussian filtering", mask);
+	cv::waitKey(0);
+    
+}
+
+
 //_____________________________________________ Classes _____________________________________________//
 
 class Histogram {
@@ -72,99 +103,6 @@ public:
 	}
 	
 };
-
-
-void regionGrowing(const cv::Mat& input, cv::Mat& mask, const int ksize, uchar similarity) {
-    //number of rows and columns of input and output image
-    int rows = input.rows;
-    int cols = input.cols;
-    //predicate Q for controlling growing, 0 if not visited yet, 255 otherwise
-    cv::Mat Q = cv::Mat::zeros(rows, cols, CV_8UC1);
-
-    //convert to grayscale, apply blur and threshold (inverse to obtain white for cracks)
-    cv::Mat gray, img;
-    cv::cvtColor(input, gray, cv::COLOR_BGR2GRAY);
-    cv::blur(gray, img, cv::Size(ksize, ksize));
-    cv::threshold(img, img, 50, 255, cv::THRESH_BINARY_INV);
-    //cv::imshow("Threshold", img);
-
-    //loop threshold image to erode pixel groups in a single one (there may be better methods (?))
-    for(int i=0; i<rows; ++i) {
-        for(int j=0; j<cols; ++j) {
-            //if the current pixel is black pass this iteration
-            if (img.at<uchar>(i, j) == 0)
-                continue;
-            //flag for controls on neighbors
-            bool flag = false;
-            //check right, down, left and up pixel, in this order
-            if(j < cols-1 && img.at<uchar>(i, j+1) == 255) {
-                flag = true;
-            } else if(i < rows-1 && img.at<uchar>(i+1, j) == 255) {
-                flag = true;
-            } else if(j > 0 && img.at<uchar>(i, j-1) == 255) {
-                flag = true;
-            } else if(i > 0 && img.at<uchar>(i-1, j) == 255) {
-                flag = true;
-            }
-
-            //change color if flag is true after checking all neighbors
-            if(flag)
-                img.at<uchar>(i, j) = 0;
-        }
-    }
-
-    //cv::imshow("Erosion", img);
-    //cv::waitKey(0);
-
-    //point to be visited
-    std::vector<std::pair<int, int>> points;
-
-    int p = 0;
-    //add points of the skeleton image into the vector
-    for(int i=0; i<img.rows; ++i) {
-        for(int j=0; j<img.cols; ++j) {
-            if(img.at<uchar>(i, j) == 255) {
-                //add to points vector
-                //NOTE: not all the points of the skeleton image may be added, since they could be too much
-                points.push_back(std::pair<int, int>(i, j));
-                //std::printf("White point at (%d, %d)\n", i, j);
-                //update point counter
-                p++;
-            }
-        }
-    }
-    std::printf("Points: %d\n", p);
-    while(!points.empty()) {
-        //pop a single point
-        std::pair<int, int> p = points.back();
-        points.pop_back();
-
-        //get color value of the point
-        uchar color = gray.at<uchar>(p.first, p.second);
-        //set the current pixel visited
-        Q.at<uchar>(p.first, p.second) = 255;
-
-        //loop for each neighbour
-        for(int i=p.first-1; i<=p.first+1; ++i) {
-            for(int j=p.second-1; j<=p.second+1; ++j) {
-                //check if pixel coordinates exist
-                if(i>=0 && i<rows && j>=0 && j<cols) {
-                    //get neighbour pixel value
-                    uchar neigh = gray.at<uchar>(i, j);
-                    //check if it has been visited
-                    uchar visited = Q.at<uchar>(i, j);
-
-                    //check if the neighbour pixel is similar
-                    if(!visited && std::abs(neigh-color) <= similarity) {
-                        points.push_back(std::pair<int, int>(i, j));
-                    }
-                }
-            }
-        }
-    }
-    //copy Q into mask
-    mask = Q.clone();
-}
 
 
 
@@ -205,88 +143,26 @@ int main(int argc, char* argv[])
 	
 	cv::Range rows(x, x+width);
     cv::Range cols(y, y+height);
-	cv::Mat img_roi = img(cols, rows);
+	cv::Mat img_roi_BGR = img(cols, rows);
 	
   	cv::namedWindow("ROI");
-	cv::imshow("ROI", img_roi);
+	cv::imshow("ROI", img_roi_BGR);
 	cv::waitKey(0);
 	
-	//___________________________ ROI segmentation Otsu thresholding ___________________________//	
 	
-    cv::Mat img_roi_gray;
-	cv::cvtColor(img_roi, img_roi_gray, cv::COLOR_BGR2GRAY);
-    
-    cv::Mat roi_blur_gray;
-    cv::GaussianBlur(img_roi_gray,roi_blur_gray,cv::Size(3,3),0);
-    
-    cv:: Mat img_roi_thr;
-	double th = cv::threshold(roi_blur_gray,img_roi_thr,0,255, cv::THRESH_BINARY | cv::THRESH_OTSU);
-	
-    std::cout << "Otsu method threshold after Gaussian Filter: " << th << std::endl;
-    
-    cv::namedWindow("Otsu's thresholding after Gaussian filtering");
-	cv::imshow("Otsu's thresholding after Gaussian filtering", img_roi_thr);
-	cv::waitKey(0);
-  
-    cv::destroyAllWindows();
-    
-    ///////////////////////////////////////////////////////////////
-    cv::Mat roi_blur;
-    cv::GaussianBlur(img_roi,roi_blur,cv::Size(3,3),0);
-    
-    cv::Mat img_roi_HSV;
-    cv::cvtColor(roi_blur, img_roi_HSV, cv::COLOR_BGR2HSV);
-    
-    cv::namedWindow("ROI HSV");
-	cv::imshow("ROI HSV", img_roi_HSV);
-	cv::waitKey(0);
+	//__________________________ Change image color space __________________________//
 
-    /*
-    cv::Scalar lower_color(190, 130, 90); // 0 15 0 // 0 58 50
-    cv::Scalar upper_color(210, 140, 115); // 17 170 255 // 30 255 255
-    cv::Mat mask; 
-    cv::inRange(img_roi, lower_color, upper_color, mask); 
-    cv::imshow("nemo mask orange", mask);
-    cv::waitKey(0);
+	cv::Mat img_roi_HSV;
+    cv::cvtColor(img_roi_BGR, img_roi_HSV, cv::COLOR_BGR2HSV);
     
-    cv::Mat result;
-    cv::bitwise_and(img_roi, img_roi, result, mask);
-    cv::imshow("nemo result orange", result);
-    cv::waitKey(0);
-    
-    
-    //apply regionGrowing
-    cv::Mat region (img_roi.rows, img_roi.cols, CV_8UC1);
-    regionGrowing(img_roi, region, 5, 10);
-    
-    //show images
-    cv::namedWindow("Region Growing");
-    cv::imshow("Region Growing", region);
-    cv::waitKey(0);
-    */
-    
-    
-    // take middle pixel intensity value
-    std::cout << "Middle pixel is " << (x+width)/2 << " and " << (y+height)/2 << std::endl;
-    cv::Vec3b bgrPixel = img_roi.at<cv::Vec3b>((x+width)/2, (y+height)/2);
-    std::cout << "Middle pixel value is " << bgrPixel << std::endl;
-    
-    
-    // merge hand  detection (YCbCr and hsv)
-    
-    // HSV_mask = cv2.morphologyEx(HSV_mask, cv2.MORPH_OPEN, np.ones((3,3), np.uint8))
-
-
     cv::Mat img_roi_YCrCb;
-    cv::cvtColor(img_roi, img_roi_YCrCb, cv::COLOR_BGR2YCrCb);
-    cv::namedWindow("img_YCrCb");
-    cv::imshow("img_YCrCb", img_roi_YCrCb);
-    cv::waitKey(0);
+    cv::cvtColor(img_roi_BGR, img_roi_YCrCb, cv::COLOR_BGR2YCrCb);
+
+
+    //__________________________ Calculate and Plot Histogram __________________________//
     
-    
-    //__________________________ Calculate and Plot Histogram __________________________
 	Histogram h1;
-	cv::Mat hist_roi_BGR = h1.calc_histogram(img_roi);
+	cv::Mat hist_roi_BGR = h1.calc_histogram(img_roi_BGR);
 	cv::Mat hist_BGR = h1.plot_histogram(hist_roi_BGR);
 	
     Histogram h2;
@@ -305,7 +181,64 @@ int main(int argc, char* argv[])
 	cv::imshow("Histogram YCrCb", hist_YCrCb);
 	cv::waitKey(0);
     cv::destroyAllWindows();
+	
+	
+	//___________________________ ROI segmentation Otsu thresholding ___________________________//	
+	
+    cv::Mat mask_otsu_BGR, mask_otsu_HSV, mask_otsu_YCrCb;    
     
+    otsuSegmentation(img_roi_BGR, mask_otsu_BGR, 5, 1);
+    otsuSegmentation(img_roi_HSV, mask_otsu_HSV, 5, 2); 
+    otsuSegmentation(img_roi_YCrCb, mask_otsu_YCrCb, 5, 3); 
+    
+    
+    //_____________________________ Multiplying mask to get final result _____________________________//
+    
+    cv::Mat mask_final(mask_otsu_BGR.rows, mask_otsu_BGR.cols, CV_8UC1, cv::Scalar::all(0)); // must be one channel
+    
+    cv::namedWindow("Otsu's thresholding final");
+	cv::imshow("Otsu's thresholding final", mask_final);
+	cv::waitKey(0);
+    
+    mask_final =  mask_otsu_BGR.mul(mask_otsu_HSV);
+    cv::namedWindow("Otsu's thresholding final");
+	cv::imshow("Otsu's thresholding final", mask_final);
+	cv::waitKey(0);
+    
+
+    /*
+    cv::Scalar lower_color(190, 130, 90); // 0 15 0 // 0 58 50
+    cv::Scalar upper_color(210, 140, 115); // 17 170 255 // 30 255 255
+    cv::Mat mask; 
+    cv::inRange(img_roi, lower_color, upper_color, mask); 
+    cv::imshow("nemo mask orange", mask);
+    cv::waitKey(0);
+    
+    cv::Mat result;
+    cv::bitwise_and(img_roi, img_roi, result, mask);
+    cv::imshow("nemo result orange", result);
+    cv::waitKey(0);
+    
+    
+    
+    // take middle pixel intensity value
+    std::cout << "Middle pixel is " << (x+width)/2 << " and " << (y+height)/2 << std::endl;
+    cv::Vec3b bgrPixel = img_roi.at<cv::Vec3b>((x+width)/2, (y+height)/2);
+    std::cout << "Middle pixel value is " << bgrPixel << std::endl;
+    
+    
+    // merge hand  detection (YCbCr and hsv)
+    
+    // HSV_mask = cv2.morphologyEx(HSV_mask, cv2.MORPH_OPEN, np.ones((3,3), np.uint8))
+
+
+    cv::namedWindow("img_YCrCb");
+    cv::imshow("img_YCrCb", img_roi_YCrCb);
+    cv::waitKey(0);
+    
+    
+
+    //___________________________________ in Range segmentation ________________________//
     
     cv::Scalar lower_color(140, 92, 8); // 0 15 0 // 0 58 50
     cv::Scalar upper_color(168, 141, 11); // 17 170 255 // 30 255 255
