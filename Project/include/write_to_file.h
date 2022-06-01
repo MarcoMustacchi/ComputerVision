@@ -2,7 +2,8 @@
 #define WRITE2FILE_H
 
 
-void write_to_file(float value);
+void write_results_Detection(float value);
+void write_results_Segmentation(float value);
 
 
 #endif

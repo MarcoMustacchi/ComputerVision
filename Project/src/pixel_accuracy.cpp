@@ -37,30 +37,42 @@ std::vector<int> read_numbers(std::string file_name)
     return numbers;
 }
 
-
-void pixel_accuracy(cv::Mat mask, cv::Mat mask_otsu, int x, int y, int width, int height)
+void otsu_Thresholding(cv::Mat& img_roi, cv::Mat& img_roi_thr) 
 {
 
-    int rows = mask.rows;
-    int cols = mask.cols;
-
-    cv::Mat prediction(rows, cols, CV_8UC1, cv::Scalar::all(0)); // must be one channel both, or 3 channel both per sommare / copiare sopra
-    
-	cv::imshow("Ground truth", mask);
-	cv::waitKey(0);
-    
-    mask_otsu.copyTo(prediction(cv::Rect(x, y, mask_otsu.cols, mask_otsu.rows)));
-    
-	cv::imshow("Prediction", prediction);
-	cv::waitKey(0);
+	//___________________________ ROI segmentation Otsu thresholding ___________________________//	
 	
+    cv::Mat img_roi_gray;
+	cv::cvtColor(img_roi, img_roi_gray, cv::COLOR_BGR2GRAY);
+    
+    cv::Mat roi_blur_gray;
+    cv::GaussianBlur(img_roi_gray,roi_blur_gray,cv::Size(3,3),0);
+    
+	double th = cv::threshold(roi_blur_gray,img_roi_thr,0,255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+	
+    std::cout << "Otsu method threshold after Gaussian Filter: " << th << std::endl;
+    
+    cv::namedWindow("Otsu's thresholding after Gaussian filtering");
+	cv::imshow("Otsu's thresholding after Gaussian filtering", img_roi_thr);
+	cv::waitKey(0);
+
+}
+
+
+
+float pixel_accuracy(cv::Mat mask_true, cv::Mat mask_predict, int x, int y, int width, int height)
+{
+	
+    int rows = mask_true.rows;
+    int cols = mask_true.cols;
+    
 	int totCorrect = 0;
 	
-	for (int i = 1; i <= mask.rows; i++) // in this way is a 9x9
+	for (int i = 1; i <= mask_true.rows; i++) 
     {
-	    for (int j = 1; j <= mask.cols; j++)
+	    for (int j = 1; j <= mask_true.cols; j++)
 	    {
-	        if ( mask.at<uchar>(i,j) == mask_otsu.at<uchar>(i,j) ) 
+	        if ( mask_true.at<uchar>(i,j) == mask_predict.at<uchar>(i,j) ) 
 	            totCorrect += 1;
 	    }
     }
@@ -68,10 +80,10 @@ void pixel_accuracy(cv::Mat mask, cv::Mat mask_otsu, int x, int y, int width, in
     int totArea = rows * cols;
     
     float pixelAccuracy = (float) totCorrect / totArea;
-    
-    std::cout << "Pixel accuracy is: " << pixelAccuracy << std::endl;
 	
-	write_to_file(pixelAccuracy);
+	write_results_Segmentation(pixelAccuracy);
+	
+	return pixelAccuracy;
 	
 }
 
@@ -80,17 +92,7 @@ void pixel_accuracy(cv::Mat mask, cv::Mat mask_otsu, int x, int y, int width, in
 
 int main(int argc, char* argv[])
 {
-	
-	//___________________________ Load Dataset bounding box coordinates ___________________________ //
-	
-	std::vector<int> coordinates_bb;
-	
-	coordinates_bb = read_numbers("../Dataset/det/02.txt");
-	
-	for (int i=0; i<coordinates_bb.size(); ++i)
-    	std::cout << coordinates_bb[i] << ' ';
-    std::cout << std::endl;
-	
+
 	//___________________________ Load Dataset image ___________________________ //
 		
 	cv::Mat img = cv::imread("../Dataset/rgb/02.jpg", cv::IMREAD_COLOR);
@@ -100,9 +102,9 @@ int main(int argc, char* argv[])
 	
 	//___________________________ Load Dataset mask ___________________________ //
 		
-	cv::Mat mask = cv::imread("../Dataset/mask/02.png", cv::IMREAD_COLOR);
-	cv::namedWindow("Original mask");
-	cv::imshow("Original mask", mask);
+	cv::Mat mask_true = cv::imread("../Dataset/mask/02.png", cv::IMREAD_COLOR);
+	cv::namedWindow("Ground truth mask");
+	cv::imshow("Ground truth mask", mask_true);
 	cv::waitKey(0);
     
     int rows = img.rows;
@@ -111,92 +113,78 @@ int main(int argc, char* argv[])
     std::cout << "Dim original " << rows << " and " << cols << std::endl;
     
     
-	//___________________________ ROI extraction ___________________________//
+	//___________________________ Load Dataset bounding box coordinates ___________________________ //
 	
-	int x = coordinates_bb[0];
-	int y = coordinates_bb[1];
-	int width = coordinates_bb[2];
-	int height = coordinates_bb[3];
+	std::vector<int> coordinates_bb;
 	
-	cv::Range colonna(x, x+width);
-    cv::Range riga(y, y+height);
-	cv::Mat img_roi = img(riga, colonna);
+	coordinates_bb = read_numbers("../Dataset/det/02.txt");
 	
-  	cv::namedWindow("ROI");
-	cv::imshow("ROI", img_roi);
-	cv::waitKey(0);
+	for (int i=0; i<coordinates_bb.size(); ++i)
+    	std::cout << coordinates_bb[i] << ' ';
+    std::cout << std::endl;
+    
+	int n_hands = coordinates_bb.size() / 4;
+	std::cout << "Number of hands detected are " << n_hands << std::endl;
+    
+    
+    std::vector<cv::Mat> img_roi(n_hands);
+    std::vector<cv::Mat> img_roi_thr(n_hands);
+    
+	//___________________________ Important parameters declaration ___________________________//
+    
+	int x, y, width, height;
+	// cv::Point pt1(0,0), pt2(0,0);
+	int a,b,c,d;
+	// cv::Point pt3(0,0), pt4(0,0);
+	float pixelAccuracy;
 	
-	//___________________________ ROI segmentation Otsu thresholding ___________________________//	
+	int temp = 0; // in order to get right index in vector of coordinates
 	
-    cv::Mat img_roi_gray;
-	cv::cvtColor(img_roi, img_roi_gray, cv::COLOR_BGR2GRAY);
-    
-    cv::Mat roi_blur_gray;
-    cv::GaussianBlur(img_roi_gray,roi_blur_gray,cv::Size(3,3),0);
-    
-    cv:: Mat img_roi_thr;
-	double th = cv::threshold(roi_blur_gray,img_roi_thr,0,255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+	cv::Mat prediction_mask(rows, cols, CV_8UC1, cv::Scalar::all(0));
 	
-    std::cout << "Otsu method threshold after Gaussian Filter: " << th << std::endl;
-    
-    cv::namedWindow("Otsu's thresholding after Gaussian filtering");
-	cv::imshow("Otsu's thresholding after Gaussian filtering", img_roi_thr);
-	cv::waitKey(0);
-  
-    cv::destroyAllWindows();
-    
-    
-    pixel_accuracy(mask, img_roi_thr, x, y, width, height);
-    
-    
-    // generate random color and color the mask moltiplicando ogni singolo canale con rispettivo colore
-    cv::Mat mask_otsu_color;
-    
-    cv::bitwise_and(img_roi, img_roi, mask_otsu_color, img_roi_thr);
-    
-    cv::namedWindow("Final");
-	cv::imshow("Final", mask_otsu_color);
-	cv::waitKey(0);
+	for (int i=0; i<n_hands; i++) 
+	{
+	    
+	    //_________ ROI extraction _________//
+    	x = coordinates_bb[i+temp];
+	    y = coordinates_bb[i+temp+1];
+	    width = coordinates_bb[i+temp+2];
+	    height = coordinates_bb[i+temp+3];
 	
-	cv::RNG rng(12345); // warning, it's a class
-	cv::Scalar random_color = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
-	cv::Scalar random_color2 = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+		cv::Range colonna(x, x+width);
+        cv::Range riga(y, y+height);
+	    img_roi[i] = img(riga, colonna);
+	    
+      	cv::namedWindow("ROI");
+	    cv::imshow("ROI", img_roi[i]);
+	    cv::waitKey(0);
+	    
+	    
+        //_________ Otsu thresholding _________//
+        otsu_Thresholding(img_roi[i], img_roi_thr[i]); 
+        
+      	cv::namedWindow("ROI Otsu");
+	    cv::imshow("ROI Otsu", img_roi_thr[i]);
+	    cv::waitKey(0);
+	    
+	    //_________ Insert ROI mask in image original dimension _________//
+	    
+	    img_roi_thr[i].copyTo(prediction_mask(cv::Rect(x, y, img_roi_thr[i].cols, img_roi_thr[i].rows)));
+	    
+        cv::namedWindow("Prediction mask");
+        cv::imshow("Prediction mask", prediction_mask);
+        cv::waitKey(0);
+        
+        temp = temp + 3;
 	
-	std::cout << "Random color " << random_color << std::endl;
-	std::cout << "Random color " << random_color2 << std::endl;
+	}
 	
-    cv::Mat Bands_BGR[3];
-    cv::Mat merged;
-    cv::split(mask_otsu_color, Bands_BGR);
-    
-    Bands_BGR[0] = Bands_BGR[0] * random_color[0];
-    Bands_BGR[1] = Bands_BGR[1] * random_color[1];
-    Bands_BGR[2] = Bands_BGR[2] * random_color[2];
-    
-    std::vector<cv::Mat> channels_BGR;
-	channels_BGR.push_back(Bands_BGR[0]);
-	channels_BGR.push_back(Bands_BGR[1]);
-	channels_BGR.push_back(Bands_BGR[2]);
-    
-    cv::merge(channels_BGR, merged);
-    
-    cv::namedWindow("Final random");
-	cv::imshow("Final random", merged);
-	cv::waitKey(0);
+	// ________________ Final pixel accuracy ________________ //
+	// unique for all the mask, different wrt iou which is evaluated for each bouding box
 	
-	
-	// inserisci maschera in immagine nera stessa dimensione originale e somma con immagine originale
-    cv::Mat prediction(rows, cols, CV_8UC3, cv::Scalar(0, 0, 0)); 
-    merged.copyTo(prediction(cv::Rect(x, y, merged.cols, merged.rows)));
-	cv::imshow("Prediction", prediction);
-	cv::waitKey(0);
-	
-	// back to original image
-    cv::Mat ultima;
-    ultima = img + prediction;
+    pixelAccuracy = pixel_accuracy(mask_true, prediction_mask, x, y, width, height);
+    std::cout << "Pixel accuracy is: " << pixelAccuracy << std::endl;
     
-	cv::imshow("Boh", ultima);
-	cv::waitKey(0);
   
 	return 0;
   

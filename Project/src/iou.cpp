@@ -42,6 +42,7 @@ std::vector<int> read_numbers(std::string file_name)
 
 float bb_intersection_over_union(int x, int y, int width, int height, int a, int b, int c, int d)
 {
+
     int xA = std::max(x, a);
     int yA = std::max(y, b);
     int xB = std::min(x+width, a+c);
@@ -63,7 +64,10 @@ float bb_intersection_over_union(int x, int y, int width, int height, int a, int
     
     float iou = (float) interArea / (area_boxA + area_boxB - interArea);
     
+    write_results_Detection(iou);
+    
     return iou;
+    
 }
 
 
@@ -77,6 +81,9 @@ int main(int argc, char* argv[])
 	
 	coordinates_bb = read_numbers("../Dataset/det/02.txt");
 	
+	int n_hands = coordinates_bb.size() / 4;
+	std::cout << "Number of hands detected are " << n_hands << std::endl;
+	
 	for (int i=0; i<coordinates_bb.size(); ++i)
     	std::cout << coordinates_bb[i] << ' ';
     std::cout << std::endl;
@@ -89,32 +96,51 @@ int main(int argc, char* argv[])
 	cv::waitKey(0);
 	
 	//___________________________ Draw Ground Thruth Bounding Boxes ___________________________ //
-	int x = coordinates_bb[0];
-	int y = coordinates_bb[1];
-	int width = coordinates_bb[2];
-	int height = coordinates_bb[3];
 	
-	cv::Point pt1(x, y);
-    cv::Point pt2(x + width, y + height);
-    cv::rectangle(img, pt1, pt2, cv::Scalar(0, 255, 0));
+	int x, y, width, height;
+	// cv::Point pt1(0,0), pt2(0,0);
+	int a,b,c,d;
+	// cv::Point pt3(0,0), pt4(0,0);
+	float iou;
 	
-	//___________________________ Draw Detected Bounding Boxes ___________________________ //
-	int a = x + 15;
-	int b = y + 3;
-	int c = width - 5;
-	int d = height + 20;
+	int temp = 0; // in order to get right index in vector of coordinates
 	
-	cv::Point pt3(a, b);
-    cv::Point pt4(a + c, b + d);
-    cv::rectangle(img, pt3, pt4, cv::Scalar(0, 0, 255));
+	for (int i=0; i<n_hands; i++) 
+	{
+	    
+	    //_________ Draw Ground Thruth Bounding Boxes _________//
+    	x = coordinates_bb[i+temp];
+	    y = coordinates_bb[i+temp+1];
+	    width = coordinates_bb[i+temp+2];
+	    height = coordinates_bb[i+temp+3];
 	
+    	cv::Point pt1(x, y);
+        cv::Point pt2(x + width, y + height);
+        cv::rectangle(img, pt1, pt2, cv::Scalar(0, 255, 0));
 	
+	    // _________ Draw Detected Bounding Boxes _________//
+    	a = x + 15;
+	    b = y + 3;
+	    c = width - 5;
+	    d = height + 20;
+	    
+	    cv::Point pt3(a, b);
+        cv::Point pt4(a + c, b + d);
+        cv::rectangle(img, pt3, pt4, cv::Scalar(0, 0, 255));
+        
+        // _________ Compute IoU measurements _________//
+    	iou = bb_intersection_over_union(x, y, width, height, a, b, c, d);
+    	std::cout << "IoU is " << iou << std::endl;
+    	
+        temp = temp + 3;
+	
+	}
+	
+
 	cv::namedWindow("New Image");
 	cv::imshow("New Image", img);
 	cv::waitKey(0);
 	
-	
-	float iou = bb_intersection_over_union(x, y, width, height, a, b, c, d);
 	
 	cv::Point pt5(656, 325);
     cv::Point pt6(774, 433);
@@ -123,22 +149,6 @@ int main(int argc, char* argv[])
 	cv::namedWindow("New Image");
 	cv::imshow("New Image", img);
 	cv::waitKey(0);
-	
-	std::cout << "IoU is " << iou << std::endl;
-	
-	/*
-  
-	//___________________________ ROI extraction ___________________________//
-	
-	cv::Range rows(x, x+width);
-    cv::Range cols(y, y+height);
-	cv::Mat img_roi = img(cols, rows);
-	
-  	cv::namedWindow("ROI");
-	cv::imshow("ROI", img_roi);
-	cv::waitKey(0);
-	*/
-
 
   
 	return 0;

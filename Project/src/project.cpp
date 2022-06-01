@@ -194,16 +194,85 @@ int main(int argc, char* argv[])
     
     //_____________________________ Multiplying mask to get final result _____________________________//
     
-    cv::Mat mask_final(mask_otsu_BGR.rows, mask_otsu_BGR.cols, CV_8UC1, cv::Scalar::all(0)); // must be one channel
+    cv::Mat mask_final_ROI(mask_otsu_BGR.rows, mask_otsu_BGR.cols, CV_8UC1, cv::Scalar::all(0)); // must be one channel
     
     cv::namedWindow("Otsu's thresholding final");
-	cv::imshow("Otsu's thresholding final", mask_final);
+	cv::imshow("Otsu's thresholding final", mask_final_ROI);
 	cv::waitKey(0);
     
-    mask_final =  mask_otsu_BGR.mul(mask_otsu_HSV);
+    mask_final_ROI =  mask_otsu_BGR.mul(mask_otsu_HSV);
     cv::namedWindow("Otsu's thresholding final");
-	cv::imshow("Otsu's thresholding final", mask_final);
+	cv::imshow("Otsu's thresholding final", mask_final_ROI);
 	cv::waitKey(0);
+	
+	//______________ inserisci maschera in immagine nera stessa dimensione originale ______________//
+	
+    cv::Mat mask_final(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0)); 
+    mask_final_ROI.copyTo(mask_final(cv::Rect(x, y, mask_final_ROI.cols, mask_final_ROI.rows)));
+	cv::imshow("Mask final", mask_final);
+	cv::waitKey(0);
+	
+	
+	//___________________________________ Save ____________________________________//
+	
+	cv::imwrite("../results/mask_predict.png", mask_final);
+	
+	
+	/*
+	//_____________________________ generate random color  _____________________________//
+
+    cv::Mat mask_otsu_color;
+    
+    cv::bitwise_and(img_roi, img_roi, mask_otsu_color, img_roi_thr);
+    
+    cv::namedWindow("Final");
+	cv::imshow("Final", mask_otsu_color);
+	cv::waitKey(0);
+	
+	cv::RNG rng(12345); // warning, it's a class
+	cv::Scalar random_color = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+	cv::Scalar random_color2 = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+	
+	std::cout << "Random color " << random_color << std::endl;
+	std::cout << "Random color " << random_color2 << std::endl;
+	
+	
+	//______________ color the mask moltiplicando ogni singolo canale con rispettivo colore ________________//
+	
+    cv::Mat Bands_BGR[3];
+    cv::Mat merged;
+    cv::split(mask_otsu_color, Bands_BGR);
+    
+    Bands_BGR[0] = Bands_BGR[0] * random_color[0];
+    Bands_BGR[1] = Bands_BGR[1] * random_color[1];
+    Bands_BGR[2] = Bands_BGR[2] * random_color[2];
+    
+    std::vector<cv::Mat> channels_BGR;
+	channels_BGR.push_back(Bands_BGR[0]);
+	channels_BGR.push_back(Bands_BGR[1]);
+	channels_BGR.push_back(Bands_BGR[2]);
+    
+    cv::merge(channels_BGR, merged);
+    
+    cv::namedWindow("Final random");
+	cv::imshow("Final random", merged);
+	cv::waitKey(0);
+	
+	
+	//____________________ Inserisci maschera immagine colorata in immagine nera stessa dimensione originale _____________________//
+    cv::Mat prediction(rows, cols, CV_8UC3, cv::Scalar(0, 0, 0)); 
+    merged.copyTo(prediction(cv::Rect(x, y, merged.cols, merged.rows)));
+	cv::imshow("Prediction", prediction);
+	cv::waitKey(0);
+	
+	// back to original image
+    cv::Mat ultima;
+    ultima = img + prediction;
+    
+	cv::imshow("Boh", ultima);
+	cv::waitKey(0);
+	
+	*/
     
 
     /*

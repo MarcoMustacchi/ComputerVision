@@ -1,7 +1,7 @@
 /**
- * @file iou.cpp
+ * @file write_to_file.cpp
  *
- * @brief  Pixel Accuracy
+ * @brief  Write results to file
  *
  * @author Marco Mustacchi
  *
@@ -12,11 +12,21 @@
 #include <fstream>
 
 
-void write_to_file(float value)
+void write_results_Detection(float value)
 {	
     
   std::ofstream myfile;
-  myfile.open("../results/results.txt");
+  myfile.open("../results/performanceDetection.txt");
+  myfile << value << std::endl;
+  myfile.close();
+    
+}
+
+void write_results_Segmentation(float value)
+{	
+    
+  std::ofstream myfile;
+  myfile.open("../results/performanceSegmentation.txt");
   myfile << value << std::endl;
   myfile.close();
     
