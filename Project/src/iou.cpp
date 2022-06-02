@@ -20,26 +20,6 @@
 
 //_____________________________________________ Functions _____________________________________________//
 
-std::vector<int> read_numbers(std::string file_name)
-{
-    std::ifstream infile;
-    infile.open(file_name);
-    std::vector<int> numbers;
-
-    if (infile.is_open())
-    {
-        int num; 
-        while(infile >> num)
-        {
-            numbers.push_back(num);
-        }
-    }
-
-    return numbers;
-}
-
-
-
 float bb_intersection_over_union(int x, int y, int width, int height, int a, int b, int c, int d)
 {
 
@@ -64,7 +44,7 @@ float bb_intersection_over_union(int x, int y, int width, int height, int a, int
     
     float iou = (float) interArea / (area_boxA + area_boxB - interArea);
     
-    write_results_Detection(iou);
+    // write_results_Detection(iou);
     
     return iou;
     
@@ -105,6 +85,9 @@ int main(int argc, char* argv[])
 	
 	int temp = 0; // in order to get right index in vector of coordinates
 	
+	std::ofstream myfile;
+	myfile.open("../results/performanceDetection.txt");
+	
 	for (int i=0; i<n_hands; i++) 
 	{
 	    
@@ -130,12 +113,14 @@ int main(int argc, char* argv[])
         
         // _________ Compute IoU measurements _________//
     	iou = bb_intersection_over_union(x, y, width, height, a, b, c, d);
+    	myfile << iou << std::endl;
     	std::cout << "IoU is " << iou << std::endl;
     	
         temp = temp + 3;
 	
 	}
 	
+	myfile.close();
 
 	cv::namedWindow("New Image");
 	cv::imshow("New Image", img);

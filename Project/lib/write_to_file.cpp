@@ -32,6 +32,3 @@ void write_results_Segmentation(float value)
     
 }
 
-
-
-

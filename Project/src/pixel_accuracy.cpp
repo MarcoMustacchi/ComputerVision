@@ -19,24 +19,6 @@
 
 //_____________________________________________ Functions _____________________________________________//
 
-std::vector<int> read_numbers(std::string file_name)
-{
-    std::ifstream infile;
-    infile.open(file_name);
-    std::vector<int> numbers;
-
-    if (infile.is_open())
-    {
-        int num; 
-        while(infile >> num)
-        {
-            numbers.push_back(num);
-        }
-    }
-
-    return numbers;
-}
-
 void otsu_Thresholding(cv::Mat& img_roi, cv::Mat& img_roi_thr) 
 {
 

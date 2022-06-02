@@ -13,30 +13,11 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-
+#include "read_numbers.h"
 
 
 
 //_____________________________________________ Functions _____________________________________________//
-
-std::vector<int> read_numbers(std::string file_name)
-{
-    std::ifstream infile;
-    infile.open(file_name);
-    std::vector<int> numbers;
-
-    if (infile.is_open())
-    {
-        int num; 
-        while(infile >> num)
-        {
-            numbers.push_back(num);
-        }
-    }
-
-    return numbers;
-}
-
 
 void otsuSegmentation(const cv::Mat& input, cv::Mat& mask, const int ksize, int color_space) 
 {
@@ -66,6 +47,30 @@ void otsuSegmentation(const cv::Mat& input, cv::Mat& mask, const int ksize, int 
 	cv::waitKey(0);
     
 }
+
+
+bool detectOverlapSegmentation(int x, int y, int width, int height, int a, int b, int c, int d)
+{
+
+    // intersection region
+    int xA = std::max(x, a);
+    int yA = std::max(y, b);
+    int xB = std::min(x+width, a+c);
+    int yB = std::min(y+height, b+d);
+    
+    int interArea = std::max(0, xB - xA) * std::max(0, yB - yA);
+    
+    std::cout << "Intersection area is " << interArea << std::endl;
+    
+    bool overlap = 0;
+    
+    if (interArea != 0)
+        overlap = 1;
+    
+    return overlap;
+    
+}
+
 
 
 //_____________________________________________ Classes _____________________________________________//
@@ -117,6 +122,9 @@ int main(int argc, char* argv[])
 	
 	for (int i=0; i<coordinates_bb.size(); ++i)
     	std::cout << coordinates_bb[i] << ' ';
+    	
+	int n_hands = coordinates_bb.size() / 4;
+	std::cout << "Number of hands detected are " << n_hands << std::endl;
 	
 	//___________________________ Load Dataset image ___________________________ //
 		
@@ -124,6 +132,50 @@ int main(int argc, char* argv[])
 	cv::namedWindow("Original Image");
 	cv::imshow("Original Image", img);
 	cv::waitKey(0);
+
+    
+	//___________________________ Important parameters declaration ___________________________//
+    std::vector<cv::Mat> img_roi(n_hands);
+    std::vector<cv::Mat> img_roi_thr(n_hands);
+    
+	int x, y, width, height;	
+	int temp = 0; // in order to get right index in vector of coordinates
+	
+	cv::Mat prediction_mask(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
+	
+	for (int i=0; i<n_hands; i++) 
+	{
+	    
+	    //_________ ROI extraction _________//
+    	x = coordinates_bb[i+temp];
+	    y = coordinates_bb[i+temp+1];
+	    width = coordinates_bb[i+temp+2];
+	    height = coordinates_bb[i+temp+3];
+	
+		cv::Range colonna(x, x+width);
+        cv::Range riga(y, y+height);
+	    img_roi[i] = img(riga, colonna);
+	    
+      	cv::namedWindow("ROI");
+	    cv::imshow("ROI", img_roi[i]);
+	    cv::waitKey(0);
+	    
+	    //_________ Draw Detected Bounding Boxes _________//
+    	cv::Point pt1(x, y);
+        cv::Point pt2(x + width, y + height);
+        cv::rectangle(img, pt1, pt2, cv::Scalar(0, 255, 0));
+        
+        temp = temp + 3;
+	
+	}
+	
+	cv::namedWindow("New Image");
+	cv::imshow("New Image", img);
+	cv::waitKey(0);
+	
+
+	
+	/*
 	
 	//___________________________ Draw Bounding Boxes ___________________________ //
 	int x = coordinates_bb[0];
@@ -138,9 +190,11 @@ int main(int argc, char* argv[])
 	cv::namedWindow("New Image");
 	cv::imshow("New Image", img);
 	cv::waitKey(0);
+	*/
   
 	//___________________________ ROI extraction ___________________________//
 	
+	/*
 	cv::Range rows(x, x+width);
     cv::Range cols(y, y+height);
 	cv::Mat img_roi_BGR = img(cols, rows);
@@ -148,8 +202,12 @@ int main(int argc, char* argv[])
   	cv::namedWindow("ROI");
 	cv::imshow("ROI", img_roi_BGR);
 	cv::waitKey(0);
+	*/
 	
 	
+	
+	
+	/*
 	//__________________________ Change image color space __________________________//
 
 	cv::Mat img_roi_HSV;
@@ -216,6 +274,31 @@ int main(int argc, char* argv[])
 	//___________________________________ Save ____________________________________//
 	
 	cv::imwrite("../results/mask_predict.png", mask_final);
+	
+	*/
+	
+	//__________________________ Detect if overlap _________________________________// 
+	
+	bool overlap = 0;
+	
+	int temp2 = 4;
+	
+	for (int i = 0; i < n_hands; i+=4) // ciclo for per controllo tutte le combinazioni di bounding box
+	{
+	      
+	    temp2 = temp2 + 4;
+	}
+	
+	int a = x + 300;
+    int b = y + 300;
+    int c = width + 300;
+    int d = height + 300;
+	    
+	overlap = detectOverlapSegmentation(coordinates_bb[0], coordinates_bb[1], coordinates_bb[2], coordinates_bb[3], a, b, c, d);
+	
+	std::cout << overlap << std::endl;
+	
+	
 	
 	
 	/*
