@@ -15,13 +15,13 @@ set(HEADER_FILES
    )
 
 cmake_minimum_required(VERSION 2.8)
-project( newProject )
+project( readNumber )
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} 
                      ${HEADER_FILES}
                    )
 add_executable( ${PROJECT_NAME} 
-                ${SRC_FILES}/newProject.cpp
+                ${SRC_FILES}/readNumber.cpp
                 ${HEADER_FILES}/read_numbers.h
                 ${LIB_FILES}/read_numbers.cpp
                 ${HEADER_FILES}/write_to_file.h

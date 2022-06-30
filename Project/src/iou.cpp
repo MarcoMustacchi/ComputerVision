@@ -14,19 +14,20 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
+#include "read_numbers.h"
 #include "write_to_file.h"
 
 
 
 //_____________________________________________ Functions _____________________________________________//
 
-float bb_intersection_over_union(int x, int y, int width, int height, int a, int b, int c, int d)
+float bb_intersection_over_union(int x_truth, int y_truth, int width_truth, int height_truth, int x_predict, int y_predict, int width_predict, int height_predict)
 {
 
-    int xA = std::max(x, a);
-    int yA = std::max(y, b);
-    int xB = std::min(x+width, a+c);
-    int yB = std::min(y+height, b+d);
+    int xA = std::max(x_truth, x_predict);
+    int yA = std::max(y_truth, y_predict);
+    int xB = std::min(x_truth+width_truth, x_predict+width_predict);
+    int yB = std::min(y_truth+height_truth, y_predict+height_predict);
     
     std::cout << xA << std::endl;
     std::cout << yA << std::endl;
@@ -37,12 +38,12 @@ float bb_intersection_over_union(int x, int y, int width, int height, int a, int
     
     std::cout << interArea << std::endl;
     
-    int area_boxA = width * height;
-    int area_boxB = c * d;
+    int area_box_truth = width_truth * height_truth;
+    int area_box_predict = width_predict * height_predict;
     
-    std::cout << area_boxA << " and " << area_boxB << std::endl;
+    std::cout << area_box_truth << " and " << area_box_predict << std::endl;
     
-    float iou = (float) interArea / (area_boxA + area_boxB - interArea);
+    float iou = (float) interArea / (area_box_truth + area_box_predict - interArea);
     
     // write_results_Detection(iou);
     
@@ -127,6 +128,7 @@ int main(int argc, char* argv[])
 	cv::waitKey(0);
 	
 	
+	//_________________ Disegno rettangolo blu nell'intersezione bounding box _________________//
 	cv::Point pt5(656, 325);
     cv::Point pt6(774, 433);
     cv::rectangle(img, pt5, pt6, cv::Scalar(255, 0, 0));

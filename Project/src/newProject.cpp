@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
 	
 	//___________________________________ Save ____________________________________//
 	
-	cv::imwrite("../results/mask_predict.png", mask_final);
+	cv::imwrite("../results/resultsSegmentation/04.png", mask_final);
 	
 	
 	/*

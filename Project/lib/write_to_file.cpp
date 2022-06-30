@@ -16,7 +16,7 @@ void write_results_Detection(float value)
 {	
     
   std::ofstream myfile;
-  myfile.open("../results/performanceDetection.txt");
+  myfile.open("../results/Performance/performanceDetection.txt");
   myfile << value << std::endl;
   myfile.close();
     
@@ -26,7 +26,7 @@ void write_results_Segmentation(float value)
 {	
     
   std::ofstream myfile;
-  myfile.open("../results/performanceSegmentation.txt");
+  myfile.open("../results/Performance/performanceSegmentation.txt");
   myfile << value << std::endl;
   myfile.close();
     
