@@ -101,24 +101,29 @@ void kmeansSegmentation(const cv::Mat& input, cv::Mat& output, const int k) {
 int main(int argc, char* argv[])
 {
 	
+    std::string image_number;
+    
+    std::cout << "Insert image number from 01 to 30" << std::endl;
+    std::cin >> image_number; 
+	
+	//___________________________ Load Dataset image ___________________________ //
+
+	cv::Mat img = cv::imread("../Dataset/rgb/" + image_number + ".jpg", cv::IMREAD_COLOR);
+	cv::namedWindow("Original Image");
+	cv::imshow("Original Image", img);
+	cv::waitKey(0);
+	
 	//___________________________ Load Dataset bounding box coordinates ___________________________ //
 	
 	std::vector<int> coordinates_bb;
 	
-	coordinates_bb = read_numbers("../Dataset/det/04.txt");
+	coordinates_bb = read_numbers("../Dataset/det/" + image_number + ".txt");
 	
 	for (int i=0; i<coordinates_bb.size(); ++i)
     	std::cout << coordinates_bb[i] << ' ';
     	
 	int n_hands = coordinates_bb.size() / 4;
 	std::cout << "Number of hands detected are " << n_hands << std::endl;
-	
-	//___________________________ Load Dataset image ___________________________ //
-		
-	cv::Mat img = cv::imread("../Dataset/rgb/04.jpg", cv::IMREAD_COLOR);
-	cv::namedWindow("Original Image");
-	cv::imshow("Original Image", img);
-	cv::waitKey(0);
 
     
 	//___________________________ Important parameters declaration ___________________________//
@@ -219,7 +224,7 @@ int main(int argc, char* argv[])
 	
 	//___________________________________ Save ____________________________________//
 	
-	cv::imwrite("../results/resultsSegmentation/04.png", mask_final);
+	cv::imwrite("../results/resultsSegmentation/" + image_number + ".png", mask_final);
 	
 	
 	/*

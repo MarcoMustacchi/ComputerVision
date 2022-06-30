@@ -1,5 +1,5 @@
 /**
- * @file iou.cpp
+ * @file read_BB_matrix.cpp
  *
  * @brief  Read coordinates Bounding Box and sort them
  *
@@ -13,7 +13,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
-
+#include "read_BB_matrix.h"
 
 // Driver function to sort the 2D vector on basis of a particular column
 bool sortcol(const std::vector<int>& v1, const std::vector<int>& v2)
@@ -22,13 +22,13 @@ bool sortcol(const std::vector<int>& v1, const std::vector<int>& v2)
 }
 
 
-int main(int argc, char* argv[])
+std::vector<std::vector<int>> read_sort_BB_matrix(std::string file_name)
 {
+    std::ifstream inFile;
+    inFile.open(file_name);
 
     std::string line;
     int word;
-
-    std::ifstream inFile("../Dataset/det/11.txt");
     
     //create a 2D vector that will store the read information
     std::vector<std::vector<int>> vec;
@@ -60,6 +60,8 @@ int main(int argc, char* argv[])
     inFile.close();
     
     //lets check out the elements of the 2D vector so the we can confirm if it contains all the right elements(rows and columns)
+    std::cout << "Original coordinates" << std::endl;
+        
     for(std::vector<int> &newvec: vec)
     {
         for(const int &elem: newvec)
@@ -75,6 +77,8 @@ int main(int argc, char* argv[])
     sort(vec.begin(), vec.end(), sortcol);
     
     //lets check out the elements of the 2D vector are sorted correctly
+    std::cout << "Ordered coordinates" << std::endl;
+    
     for(std::vector<int> &newvec: vec)
     {
         for(const int &elem: newvec)
@@ -84,6 +88,8 @@ int main(int argc, char* argv[])
         std::cout<<std::endl;
     }
     
-    return 0;
+    return vec;
     
 }
+
+

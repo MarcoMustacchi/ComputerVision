@@ -14,34 +14,25 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
-#include "read_numbers.h"
 #include "write_to_file.h"
-
+#include "read_BB_matrix.h"
 
 
 //_____________________________________________ Functions _____________________________________________//
 
 float bb_intersection_over_union(int x_truth, int y_truth, int width_truth, int height_truth, int x_predict, int y_predict, int width_predict, int height_predict)
 {
-
+    
+    // coordinates of the intersection Area
     int xA = std::max(x_truth, x_predict);
     int yA = std::max(y_truth, y_predict);
     int xB = std::min(x_truth+width_truth, x_predict+width_predict);
     int yB = std::min(y_truth+height_truth, y_predict+height_predict);
     
-    std::cout << xA << std::endl;
-    std::cout << yA << std::endl;
-    std::cout << xB << std::endl;
-    std::cout << yB << std::endl;
-    
     int interArea = std::max(0, xB - xA) * std::max(0, yB - yA);
-    
-    std::cout << interArea << std::endl;
     
     int area_box_truth = width_truth * height_truth;
     int area_box_predict = width_predict * height_predict;
-    
-    std::cout << area_box_truth << " and " << area_box_predict << std::endl;
     
     float iou = (float) interArea / (area_box_truth + area_box_predict - interArea);
     
@@ -56,68 +47,75 @@ float bb_intersection_over_union(int x_truth, int y_truth, int width_truth, int 
 int main(int argc, char* argv[])
 {
 	
+    std::string image_number;
+    
+    std::cout << "Insert image number from 01 to 30" << std::endl;
+    std::cin >> image_number; 
+    
 	//___________________________ Load Dataset bounding box coordinates ___________________________ //
 	
-	std::vector<int> coordinates_bb;
+	std::string filename_dataset = "../Dataset/det/" + image_number + ".txt";
+
+	std::vector<std::vector<int>> coord_bb_truth;
 	
-	coordinates_bb = read_numbers("../Dataset/det/02.txt");
+	coord_bb_truth = read_sort_BB_matrix(filename_dataset);
 	
-	int n_hands = coordinates_bb.size() / 4;
+	int n_hands = coord_bb_truth.size(); // return number of rows
 	std::cout << "Number of hands detected are " << n_hands << std::endl;
+    
+    
+	//___________________________ Load Predicted bounding box coordinates ___________________________ //
 	
-	for (int i=0; i<coordinates_bb.size(); ++i)
-    	std::cout << coordinates_bb[i] << ' ';
-    std::cout << std::endl;
+	std::string filename_predict = "../results/resultsDetection/" + image_number + ".txt";
+
+	std::vector<std::vector<int>> coord_bb_predict;
+	
+	coord_bb_predict = read_sort_BB_matrix(filename_predict);
 	
 	//___________________________ Load Dataset image ___________________________ //
 		
-	cv::Mat img = cv::imread("../Dataset/rgb/02.jpg", cv::IMREAD_COLOR);
+	cv::Mat img = cv::imread("../Dataset/rgb/" + image_number + ".jpg", cv::IMREAD_COLOR);
 	cv::namedWindow("Original Image");
 	cv::imshow("Original Image", img);
 	cv::waitKey(0);
 	
 	//___________________________ Draw Ground Thruth Bounding Boxes ___________________________ //
 	
-	int x, y, width, height;
-	// cv::Point pt1(0,0), pt2(0,0);
-	int a,b,c,d;
-	// cv::Point pt3(0,0), pt4(0,0);
+	int x_truth, y_truth, width_truth, height_truth;
+    int x_predict, y_predict, width_predict, height_predict;
+    
 	float iou;
 	
-	int temp = 0; // in order to get right index in vector of coordinates
-	
 	std::ofstream myfile;
-	myfile.open("../results/performanceDetection.txt");
+	myfile.open("../results/Performance/performanceDetection.txt");
 	
 	for (int i=0; i<n_hands; i++) 
 	{
 	    
 	    //_________ Draw Ground Thruth Bounding Boxes _________//
-    	x = coordinates_bb[i+temp];
-	    y = coordinates_bb[i+temp+1];
-	    width = coordinates_bb[i+temp+2];
-	    height = coordinates_bb[i+temp+3];
+    	x_truth = coord_bb_truth[i][0];
+	    y_truth = coord_bb_truth[i][1];
+	    width_truth = coord_bb_truth[i][2];
+	    height_truth = coord_bb_truth[i][3];
 	
-    	cv::Point pt1(x, y);
-        cv::Point pt2(x + width, y + height);
+    	cv::Point pt1(x_truth, y_truth);
+        cv::Point pt2(x_truth + width_truth, y_truth + height_truth);
         cv::rectangle(img, pt1, pt2, cv::Scalar(0, 255, 0));
 	
 	    // _________ Draw Detected Bounding Boxes _________//
-    	a = x + 15;
-	    b = y + 3;
-	    c = width - 5;
-	    d = height + 20;
+    	x_predict = coord_bb_predict[i][0];
+	    y_predict = coord_bb_predict[i][1];
+	    width_predict = coord_bb_predict[i][2];
+	    height_predict = coord_bb_predict[i][3];
 	    
-	    cv::Point pt3(a, b);
-        cv::Point pt4(a + c, b + d);
+	    cv::Point pt3(x_predict, y_predict);
+        cv::Point pt4(x_predict + width_predict, y_predict + height_predict);
         cv::rectangle(img, pt3, pt4, cv::Scalar(0, 0, 255));
         
         // _________ Compute IoU measurements _________//
-    	iou = bb_intersection_over_union(x, y, width, height, a, b, c, d);
+    	iou = bb_intersection_over_union(x_truth, y_truth, width_truth, height_truth, x_predict, y_predict, width_predict, height_predict);
     	myfile << iou << std::endl;
-    	std::cout << "IoU is " << iou << std::endl;
-    	
-        temp = temp + 3;
+    	std::cout << "IoU bounding box " << i+1 << " is: " << iou << std::endl;
 	
 	}
 	
@@ -126,7 +124,6 @@ int main(int argc, char* argv[])
 	cv::namedWindow("New Image");
 	cv::imshow("New Image", img);
 	cv::waitKey(0);
-	
 	
 	//_________________ Disegno rettangolo blu nell'intersezione bounding box _________________//
 	cv::Point pt5(656, 325);
@@ -137,7 +134,7 @@ int main(int argc, char* argv[])
 	cv::imshow("New Image", img);
 	cv::waitKey(0);
 
-  
+    
 	return 0;
   
 }

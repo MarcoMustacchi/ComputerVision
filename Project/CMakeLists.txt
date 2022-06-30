@@ -15,17 +15,19 @@ set(HEADER_FILES
    )
 
 cmake_minimum_required(VERSION 2.8)
-project( readNumber )
+project( IoU )
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} 
                      ${HEADER_FILES}
                    )
 add_executable( ${PROJECT_NAME} 
-                ${SRC_FILES}/readNumber.cpp
+                ${SRC_FILES}/iou.cpp
                 ${HEADER_FILES}/read_numbers.h
                 ${LIB_FILES}/read_numbers.cpp
                 ${HEADER_FILES}/write_to_file.h
                 ${LIB_FILES}/write_to_file.cpp
+                ${HEADER_FILES}/read_BB_matrix.h
+                ${LIB_FILES}/read_BB_matrix.cpp
               )  # be sure there's exactly one main() function in the source files
 #target_include_directories( ${PROJECT_NAME} PUBLIC ${HEADER_FILES}/filters.h) # attenzione, viene letto sequenziale, target_include_directories must be defined after the add_executable
 target_link_libraries( ${PROJECT_NAME} PUBLIC ${OpenCV_LIBS} )
