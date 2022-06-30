@@ -35,15 +35,9 @@ void otsuSegmentation(const cv::Mat& input, cv::Mat& mask, const int ksize, int 
         cv::split( input, ycbcr_channels );
         gray = ycbcr_channels[0]; // 3 channel of HSV is gray
     }
-    
-    cv::imshow("Before preprocessing", input);
-	cv::waitKey(0);
 	
     cv::blur(gray, temp, cv::Size(ksize, ksize));
     cv::equalizeHist(gray, gray);
-    
-    cv::imshow("After preprocessing", gray);
-	cv::waitKey(0);
 
     double th = cv::threshold(temp, mask, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     
@@ -78,6 +72,30 @@ bool detectOverlapSegmentation(int x, int y, int width, int height, int a, int b
     
 }
 
+void kmeansSegmentation(const cv::Mat& input, cv::Mat& output, const int k) {
+    //data array for kmeans function, input image need to be converted to array like
+    cv::Mat data = input.reshape(1, input.rows * input.cols);
+    //convert to 32 float
+    data.convertTo(data, CV_32F);
+    
+    //structures for kmeans function
+    std::vector<int> labels;
+    cv::Mat1f centers;
+    //apply kmeans
+    double compactness = cv::kmeans(data, k, labels, cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 0.1), 10, cv::KMEANS_PP_CENTERS, centers);
+    std::printf("Compactness: %f\n", compactness);
+
+    //update data array with clusters colors
+    for(int i=0; i<data.rows; ++i) {
+        data.at<float>(i, 0) = centers(labels[i], 0);
+        data.at<float>(i, 1) = centers(labels[i], 1);
+        data.at<float>(i, 2) = centers(labels[i], 2);
+    }
+
+    //reshape into output image
+    output = data.reshape(3, input.rows);
+    output.convertTo(output, CV_8UC3);
+}
 
 
 int main(int argc, char* argv[])
@@ -106,9 +124,11 @@ int main(int argc, char* argv[])
 	//___________________________ Important parameters declaration ___________________________//
     std::vector<cv::Mat> img_roi_BGR(n_hands);
     std::vector<cv::Mat> img_roi_thr(n_hands);
+    cv::Mat tempROI;
     
 	int x, y, width, height;	
 	int temp = 0; // in order to get right index in vector of coordinates
+		
 		
 	for (int i=0; i<n_hands; i++) 
 	{
@@ -121,7 +141,8 @@ int main(int argc, char* argv[])
 	
 		cv::Range colonna(x, x+width);
         cv::Range riga(y, y+height);
-	    img_roi_BGR[i] = img(riga, colonna);
+	    tempROI = img(riga, colonna);
+	    img_roi_BGR[i] = tempROI.clone(); // otherwise matrix will not be continuos
 	    
       	cv::namedWindow("ROI");
 	    cv::imshow("ROI", img_roi_BGR[i]);
@@ -174,13 +195,23 @@ int main(int argc, char* argv[])
 	
 	cv::Mat mask_final(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0)); 
 	
+	/*
 	for (int i=0; i<n_hands; i++) 
 	{
 		mask_final_ROI[i].copyTo(mask_final(cv::Rect(x, y, mask_final_ROI[i].cols, mask_final_ROI[i].rows)));
-		cv::imshow("Mask final", mask_final);
-		cv::waitKey(0);
 	}
+	*/
 	
+	// metto ROI in immagine nera stesse dimensioni originale
+	cv::Mat mask_OriginalDim1(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
+	cv::Mat mask_OriginalDim2(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
+	
+	mask_final_ROI[0].copyTo(mask_OriginalDim1(cv::Rect(coordinates_bb[0], coordinates_bb[1], mask_final_ROI[0].cols, mask_final_ROI[0].rows)));
+	mask_final_ROI[1].copyTo(mask_OriginalDim2(cv::Rect(coordinates_bb[4], coordinates_bb[5], mask_final_ROI[1].cols, mask_final_ROI[1].rows)));
+	
+	cv::bitwise_or(mask_OriginalDim1, mask_OriginalDim2, mask_final);
+	
+	cv::namedWindow("Mask final");
     cv::imshow("Mask final", mask_final);
 	cv::waitKey(0);
 	
@@ -190,8 +221,10 @@ int main(int argc, char* argv[])
 	
 	cv::imwrite("../results/mask_predict.png", mask_final);
 	
-	//__________________________ Detect if overlap _________________________________// 
 	
+	/*
+	//__________________________ Detect if overlap _________________________________// 
+	    
 	bool overlap = 0;
 	
 	int x1, y1, width1, height1;
@@ -263,10 +296,40 @@ int main(int argc, char* argv[])
 	cv::imshow("mask_final_Overlap", mask_final_Overlap);
 	cv::waitKey(0);
 	
+	cv::imwrite("../results/mask_Overlap.png", mask_final_Overlap);
 	
-	/*
-	//_____________________________ generate random color  _____________________________//
+	cv::Mat mask_Opening;
+	
+	cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(10,10));
+	
+	cv::morphologyEx(mask_final_Overlap, mask_Opening, cv::MORPH_OPEN, kernel);
+		
+	cv::namedWindow("mask_final_Opening");
+	cv::imshow("mask_final_Opening", mask_final_Overlap);
+	cv::waitKey(0);
+	
+	
+	//_____________________________________ Kmeans ____________________________________//
+	
+    std::vector<cv::Mat> mask_Kmeans(n_hands);   
+	
+	for (int i=0; i<n_hands; i++) 
+	{
+        kmeansSegmentation(img_roi_BGR[i], mask_Kmeans[i], 2);  
+      	cv::namedWindow("Kmeans");
+	    cv::imshow("Kmeans", mask_Kmeans[i]);
+	    cv::waitKey(0);
+	}
 
+	
+	cv::imwrite("../results/mask_Kmeans1.png", mask_Kmeans[0]);
+	cv::imwrite("../results/mask_Kmeans2.png", mask_Kmeans[1]);
+	
+	*/
+	
+	
+	//_____________________________ generate random color  _____________________________//
+    /*
     cv::Mat mask_otsu_color;
     
     cv::bitwise_and(img_roi, img_roi, mask_otsu_color, img_roi_thr);
@@ -274,37 +337,117 @@ int main(int argc, char* argv[])
     cv::namedWindow("Final");
 	cv::imshow("Final", mask_otsu_color);
 	cv::waitKey(0);
+	*/
 	
 	cv::RNG rng(12345); // warning, it's a class
-	cv::Scalar random_color = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
-	cv::Scalar random_color2 = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
 	
-	std::cout << "Random color " << random_color << std::endl;
-	std::cout << "Random color " << random_color2 << std::endl;
+	std::vector<cv::Scalar> random_color(n_hands);
+	std::vector<cv::Mat> img_ROI_color(n_hands);
+	
+	for (int i=0; i<n_hands; i++) 
+	{
+        random_color[i] = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+        std::cout << "Random color " << random_color[i] << std::endl;
+        
+        cv::cvtColor(mask_final_ROI[i], img_ROI_color[i], cv::COLOR_GRAY2RGB);
+	}
 	
 	
 	//______________ color the mask moltiplicando ogni singolo canale con rispettivo colore ________________//
+    
+    cv::Mat maskPOL;
+    cv::inRange(img_ROI_color[0], cv::Scalar(255, 255, 255), cv::Scalar(255, 255, 255), maskPOL);
+    img_ROI_color[0].setTo(random_color[0], maskPOL);
 	
-    cv::Mat Bands_BGR[3];
-    cv::Mat merged;
-    cv::split(mask_otsu_color, Bands_BGR);
-    
-    Bands_BGR[0] = Bands_BGR[0] * random_color[0];
-    Bands_BGR[1] = Bands_BGR[1] * random_color[1];
-    Bands_BGR[2] = Bands_BGR[2] * random_color[2];
-    
-    std::vector<cv::Mat> channels_BGR;
-	channels_BGR.push_back(Bands_BGR[0]);
-	channels_BGR.push_back(Bands_BGR[1]);
-	channels_BGR.push_back(Bands_BGR[2]);
-    
-    cv::merge(channels_BGR, merged);
-    
+	for(int i=0; i<img_ROI_color[0].rows; i++) {
+        for(int j=0; j<img_ROI_color[0].cols; j++) {
+            if(mask_final_ROI[0].at<uchar>(i,j) == 255) {
+                img_ROI_color[0].at<cv::Vec3b>(i,j)[0] = random_color[0][0];
+                img_ROI_color[0].at<cv::Vec3b>(i,j)[1] = random_color[0][1];
+                img_ROI_color[0].at<cv::Vec3b>(i,j)[2] = random_color[0][2];
+            }
+        }
+	}
+	
+	for(int i=0; i<img_ROI_color[1].rows; i++) {
+        for(int j=0; j<img_ROI_color[1].cols; j++) {
+            if(mask_final_ROI[1].at<uchar>(i,j) == 255) {
+                img_ROI_color[1].at<cv::Vec3b>(i,j)[0] = random_color[1][0];
+                img_ROI_color[1].at<cv::Vec3b>(i,j)[1] = random_color[1][1];
+                img_ROI_color[1].at<cv::Vec3b>(i,j)[2] = random_color[1][2];
+            }
+        }
+	}
+	
     cv::namedWindow("Final random");
-	cv::imshow("Final random", merged);
+	cv::imshow("Final random", img_ROI_color[0]);
+	cv::waitKey(0);
+	
+    cv::namedWindow("Final random");
+	cv::imshow("Final random", img_ROI_color[1]);
 	cv::waitKey(0);
 	
 	
+	//____________________ Inserisci maschera immagine colorata in immagine nera stessa dimensione originale _____________________//
+	cv::Mat mask_color_final(img.rows, img.cols, CV_8UC3, cv::Scalar::all(0)); 
+	
+	// metto ROI colorata in immagine nera stesse dimensioni originale
+	cv::Mat mask_color_OriginalDim1(img.rows, img.cols, CV_8UC3, cv::Scalar::all(0));
+	cv::Mat mask_color_OriginalDim2(img.rows, img.cols, CV_8UC3, cv::Scalar::all(0));
+	
+	img_ROI_color[0].copyTo(mask_color_OriginalDim1(cv::Rect(coordinates_bb[0], coordinates_bb[1], img_ROI_color[0].cols, img_ROI_color[0].rows)));
+	img_ROI_color[1].copyTo(mask_color_OriginalDim2(cv::Rect(coordinates_bb[4], coordinates_bb[5], img_ROI_color[1].cols, img_ROI_color[1].rows)));
+	
+	cv::bitwise_or(mask_color_OriginalDim1, mask_color_OriginalDim2, mask_color_final);
+	
+	cv::namedWindow("Mask final");
+    cv::imshow("Mask final", mask_color_final);
+	cv::waitKey(0);
+	
+	cv::destroyAllWindows();
+	
+	//____________________ Unisci maschera con immagine di partenza _____________________//
+	for(int i=0; i<img.rows; i++) {
+        for(int j=0; j<img.cols; j++) {
+            if(mask_color_final.at<cv::Vec3b>(i,j)[0] != 0 && mask_color_final.at<cv::Vec3b>(i,j)[1] != 0 && mask_color_final.at<cv::Vec3b>(i,j)[2] != 0) {
+                img.at<cv::Vec3b>(i,j)[0] = mask_color_final.at<cv::Vec3b>(i,j)[0];
+                img.at<cv::Vec3b>(i,j)[1] = mask_color_final.at<cv::Vec3b>(i,j)[1];
+                img.at<cv::Vec3b>(i,j)[2] = mask_color_final.at<cv::Vec3b>(i,j)[2];
+            }
+        }
+	}
+	
+	cv::namedWindow("Image final");
+    cv::imshow("Image final", img);
+	cv::waitKey(0);
+	
+	/*
+	
+	// change transparency
+	cv::Mat imageT(img_ROI_color[1].rows, img_ROI_color[1].cols, CV_8UC4, cv::Scalar(0, 0, 0));
+	cv::cvtColor(img_ROI_color[1], imageT, cv::COLOR_BGR2RGBA, 4);
+	
+    cv::Mat Bands_BGRA[4];
+    cv::split(imageT, Bands_BGRA);
+    
+    Bands_BGRA[3] = Bands_BGRA[3] * 0.5;
+
+    std::vector<cv::Mat> channels_BGRA;
+	channels_BGRA.push_back(Bands_BGRA[0]);
+	channels_BGRA.push_back(Bands_BGRA[1]);
+	channels_BGRA.push_back(Bands_BGRA[2]);
+	channels_BGRA.push_back(Bands_BGRA[3]);
+    
+    cv::Mat mergedL(img_ROI_color[1].rows, img_ROI_color[1].cols, CV_8UC4, cv::Scalar(0, 0, 0));
+    cv::merge(channels_BGRA, mergedL);
+	
+    cv::namedWindow("Final random");
+	cv::imshow("Final random", mergedL);
+	cv::waitKey(0);
+	
+	*/
+	
+	/*
 	//____________________ Inserisci maschera immagine colorata in immagine nera stessa dimensione originale _____________________//
     cv::Mat prediction(rows, cols, CV_8UC3, cv::Scalar(0, 0, 0)); 
     merged.copyTo(prediction(cv::Rect(x, y, merged.cols, merged.rows)));
@@ -317,9 +460,7 @@ int main(int argc, char* argv[])
     
 	cv::imshow("Boh", ultima);
 	cv::waitKey(0);
-	
-	*/
-    
+    */
     
 	return 0;
   
