@@ -1,5 +1,5 @@
 /**
- * @file iou.cpp
+ * @file pixel_accuracy.cpp
  *
  * @brief  Pixel Accuracy
  *
@@ -16,10 +16,9 @@
 #include "write_to_file.h"
 
 
-
 //_____________________________________________ Functions _____________________________________________//
 
-float pixel_accuracy(cv::Mat mask_true, cv::Mat mask_predict)
+float compute_pixel_accuracy(cv::Mat mask_true, cv::Mat mask_predict, std::string image_number)
 {
 	
     int rows = mask_true.rows;
@@ -38,7 +37,7 @@ float pixel_accuracy(cv::Mat mask_true, cv::Mat mask_predict)
     
     float pixelAccuracy = (float) totCorrect / totArea;
 	
-	write_results_Segmentation(pixelAccuracy);
+	write_performance_Segmentation(pixelAccuracy, image_number);
 	
 	return pixelAccuracy;
 	
@@ -47,9 +46,8 @@ float pixel_accuracy(cv::Mat mask_true, cv::Mat mask_predict)
 
 
 
-int main(int argc, char* argv[])
+void pixel_accuracy()
 {
-
 
     std::string image_number;
     
@@ -81,11 +79,9 @@ int main(int argc, char* argv[])
 	
 	float pixelAccuracy;
 		
-    pixelAccuracy = pixel_accuracy(mask_true, mask_predict);
+    pixelAccuracy = compute_pixel_accuracy(mask_true, mask_predict, image_number);
     std::cout << "Pixel accuracy is: " << pixelAccuracy << std::endl;
     
-  
-	return 0;
   
 }
 

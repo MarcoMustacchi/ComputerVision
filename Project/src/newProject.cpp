@@ -1,7 +1,7 @@
 /**
  * @file Project.cpp
  *
- * @brief  Hand Segmentation
+ * @brief Hand Segmentation
  *
  * @author Marco Mustacchi
  *
@@ -13,7 +13,11 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "read_numbers.h"
+#include "read_BB_matrix.h"
+#include "removeOutliers.h"
+#include "fillMaskHoles.h"
+#include "insertMask.h"  
+#include "randomColorMask.h" 
 
 
 
@@ -37,7 +41,7 @@ void otsuSegmentation(const cv::Mat& input, cv::Mat& mask, const int ksize, int 
     }
 	
     cv::blur(gray, temp, cv::Size(ksize, ksize));
-    cv::equalizeHist(gray, gray);
+    // cv::equalizeHist(gray, gray);
 
     double th = cv::threshold(temp, mask, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
     
@@ -114,15 +118,12 @@ int main(int argc, char* argv[])
 	cv::waitKey(0);
 	
 	//___________________________ Load Dataset bounding box coordinates ___________________________ //
+
+	std::vector<std::vector<int>> coordinates_bb;
 	
-	std::vector<int> coordinates_bb;
+	coordinates_bb = read_sort_BB_matrix("../Dataset/det/" + image_number + ".txt");
 	
-	coordinates_bb = read_numbers("../Dataset/det/" + image_number + ".txt");
-	
-	for (int i=0; i<coordinates_bb.size(); ++i)
-    	std::cout << coordinates_bb[i] << ' ';
-    	
-	int n_hands = coordinates_bb.size() / 4;
+	int n_hands = coordinates_bb.size(); // return number of rows
 	std::cout << "Number of hands detected are " << n_hands << std::endl;
 
     
@@ -132,17 +133,15 @@ int main(int argc, char* argv[])
     cv::Mat tempROI;
     
 	int x, y, width, height;	
-	int temp = 0; // in order to get right index in vector of coordinates
-		
 		
 	for (int i=0; i<n_hands; i++) 
 	{
 	    
 	    //_________ ROI extraction _________//
-    	x = coordinates_bb[i+temp];
-	    y = coordinates_bb[i+temp+1];
-	    width = coordinates_bb[i+temp+2];
-	    height = coordinates_bb[i+temp+3];
+    	x = coordinates_bb[i][0];
+	    y = coordinates_bb[i][1];
+	    width = coordinates_bb[i][2];
+	    height = coordinates_bb[i][3];
 	
 		cv::Range colonna(x, x+width);
         cv::Range riga(y, y+height);
@@ -152,10 +151,9 @@ int main(int argc, char* argv[])
       	cv::namedWindow("ROI");
 	    cv::imshow("ROI", img_roi_BGR[i]);
 	    cv::waitKey(0);
-        
-        temp = temp + 3;
 	
 	}
+	
 	
 	//__________________________ Change image color space __________________________//
 	std::vector<cv::Mat> img_roi_HSV(n_hands);    
@@ -189,36 +187,75 @@ int main(int argc, char* argv[])
 	for (int i=0; i<n_hands; i++) 
 	{
 		mask_final_ROI[i].create(mask_otsu_BGR[i].rows, mask_otsu_BGR[i].cols, CV_8UC1);
-		mask_final_ROI[i] = mask_otsu_BGR[i].mul(mask_otsu_HSV[i].mul(mask_otsu_YCrCb[i]));
+		// mask_final_ROI[i] = mask_otsu_BGR[i].mul(mask_otsu_HSV[i].mul(mask_otsu_YCrCb[i]));
+		
+		mask_final_ROI[i] = mask_otsu_YCrCb[i];
 	    cv::namedWindow("Otsu's thresholding final");
 		cv::imshow("Otsu's thresholding final", mask_final_ROI[i]);
 		cv::waitKey(0);
 	}
+
 	
 	
-	//______________ inserisci maschera in immagine nera stessa dimensione originale ______________//
+	//_____________________________________________ Remove outliers from segmentation _____________________________________________
+    for (int i=0; i<n_hands; i++) {
+         removeOutliers(mask_final_ROI[i]);
+    }
+    
+    cv::destroyAllWindows();
+    
 	
-	cv::Mat mask_final(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0)); 
+	//______________ insert binary mask in a image same dimension of the original ______________//
+	cv::Mat mask_final(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
+    insertBinaryMask(img, mask_final_ROI, mask_final, coordinates_bb, n_hands);
 	
-	/*
-	for (int i=0; i<n_hands; i++) 
-	{
-		mask_final_ROI[i].copyTo(mask_final(cv::Rect(x, y, mask_final_ROI[i].cols, mask_final_ROI[i].rows)));
-	}
-	*/
 	
-	// metto ROI in immagine nera stesse dimensioni originale
-	cv::Mat mask_OriginalDim1(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
-	cv::Mat mask_OriginalDim2(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
+	//____________________________________ Distance transform and watershed ____________________________________//
 	
-	mask_final_ROI[0].copyTo(mask_OriginalDim1(cv::Rect(coordinates_bb[0], coordinates_bb[1], mask_final_ROI[0].cols, mask_final_ROI[0].rows)));
-	mask_final_ROI[1].copyTo(mask_OriginalDim2(cv::Rect(coordinates_bb[4], coordinates_bb[5], mask_final_ROI[1].cols, mask_final_ROI[1].rows)));
-	
-	cv::bitwise_or(mask_OriginalDim1, mask_OriginalDim2, mask_final);
-	
-	cv::namedWindow("Mask final");
-    cv::imshow("Mask final", mask_final);
+	cv::Mat distTransf;
+	cv::distanceTransform(mask_final, distTransf, cv::DIST_L2, 3);
+	cv::normalize(distTransf, distTransf, 0, 1.0, cv::NORM_MINMAX);
+		
+	cv::namedWindow("Mask transform");
+    cv::imshow("Mask transform", distTransf);
 	cv::waitKey(0);
+	
+	cv::Mat dist;
+	cv::threshold(distTransf, dist, 0.3, 1.0, cv::THRESH_BINARY);
+	
+	cv::namedWindow("Mask transform");
+    cv::imshow("Mask transform", dist);
+	cv::waitKey(0);
+	
+    //from each blob create a seed for watershed algorithm
+    cv::Mat dist8u, markers8u;
+    cv::Mat markers = cv::Mat::zeros(dist.size(), CV_32SC1);
+    dist.convertTo(dist8u, CV_8U);
+    
+    //find total markers
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(dist8u, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    //number of contours
+    int ncomp = static_cast<int>(contours.size());
+    std::printf("Contours: %d\n", ncomp);
+
+    //draw foreground markers
+    for(int i=0; i<ncomp; ++i) {
+        cv::drawContours(markers, contours, i, cv::Scalar(i+1), -1);
+    }
+    
+    markers.convertTo(markers8u, CV_8U, 10);
+    cv::imshow("Markers", markers8u);
+    cv::waitKey(0);
+    
+    //draw background markers
+    cv::circle(markers, cv::Point(5, 5), 3, cv::Scalar(255), -1);
+    markers.convertTo(markers8u, CV_8U, 10);
+    cv::imshow("Markers", markers8u);
+    cv::waitKey(0);
+    
+	
+	cv::imwrite("../results/resultsSegmentation/DistanceTransform" + image_number + ".png", distTransf);
 	
 	cv::destroyAllWindows();
 	
@@ -256,13 +293,22 @@ int main(int argc, char* argv[])
 	
 	std::cout << "Overlap " << overlap << std::endl;
 	
+	*/
+	
+	/*
+	bool overlap = 1;
+	
 	//______________________________ Handle Overlap between masks __________________________//
 		
 	cv::Mat mask_Overlap1(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
 	cv::Mat mask_Overlap2(img.rows, img.cols, CV_8UC1, cv::Scalar::all(0));
 	
-	mask_final_ROI[0].copyTo(mask_Overlap1(cv::Rect(coordinates_bb[0], coordinates_bb[1], mask_final_ROI[0].cols, mask_final_ROI[0].rows)));
-	mask_final_ROI[1].copyTo(mask_Overlap2(cv::Rect(coordinates_bb[4], coordinates_bb[5], mask_final_ROI[1].cols, mask_final_ROI[1].rows)));
+	int i = 0;
+	mask_final_ROI[i].copyTo(mask_Overlap1(cv::Rect(coordinates_bb[i][0], coordinates_bb[i][1], mask_final_ROI[i].cols, mask_final_ROI[i].rows)));
+	
+	i = 1;
+	mask_final_ROI[i].copyTo(mask_Overlap2(cv::Rect(coordinates_bb[i][0], coordinates_bb[i][1], mask_final_ROI[i].cols, mask_final_ROI[i].rows)));
+		
 
 	cv::namedWindow("mask_final_ROI 1");
 	cv::imshow("mask_final_ROI 1", mask_final_ROI[0]);
@@ -275,6 +321,7 @@ int main(int argc, char* argv[])
 	cv::namedWindow("mask_Intersection");
 	cv::imshow("mask_Intersection", mask_Intersection);
 	cv::waitKey(0);
+	
 	
 	cv::destroyAllWindows();
 
@@ -312,106 +359,99 @@ int main(int argc, char* argv[])
 	cv::namedWindow("mask_final_Opening");
 	cv::imshow("mask_final_Opening", mask_final_Overlap);
 	cv::waitKey(0);
+	*/
 	
 	
+	/*
 	//_____________________________________ Kmeans ____________________________________//
 	
-    std::vector<cv::Mat> mask_Kmeans(n_hands);   
+    std::vector<cv::Mat> mask_Kmeans(n_hands); 
+    
+    std::vector<cv::Mat> img_roi_YCrCb(n_hands);
+    
+    std::vector<cv::Mat> mask_otsu_YCrCb(n_hands);
 	
 	for (int i=0; i<n_hands; i++) 
 	{
-        kmeansSegmentation(img_roi_BGR[i], mask_Kmeans[i], 2);  
+	    cv::cvtColor(img_roi_BGR[i], img_roi_YCrCb[i], cv::COLOR_BGR2YCrCb);
+	    otsuSegmentation(img_roi_YCrCb[i], mask_otsu_YCrCb[i], 5, 3); 
+	}
+	for (int i=0; i<n_hands; i++) 
+	{
+	    mask_Kmeans[i] = cv::Mat::zeros(mask_otsu_YCrCb[i].rows, mask_otsu_YCrCb[i].cols, CV_8UC1);
+        kmeansSegmentation(mask_otsu_YCrCb[i], mask_Kmeans[i], 3);  
       	cv::namedWindow("Kmeans");
 	    cv::imshow("Kmeans", mask_Kmeans[i]);
 	    cv::waitKey(0);
 	}
 
 	
-	cv::imwrite("../results/mask_Kmeans1.png", mask_Kmeans[0]);
-	cv::imwrite("../results/mask_Kmeans2.png", mask_Kmeans[1]);
-	
+	// cv::imwrite("../results/mask_Kmeans1.png", mask_Kmeans[0]);
+	// cv::imwrite("../results/mask_Kmeans2.png", mask_Kmeans[1]);
 	*/
 	
-	
-	//_____________________________ generate random color  _____________________________//
-    /*
-    cv::Mat mask_otsu_color;
     
-    cv::bitwise_and(img_roi, img_roi, mask_otsu_color, img_roi_thr);
-    
-    cv::namedWindow("Final");
-	cv::imshow("Final", mask_otsu_color);
-	cv::waitKey(0);
-	*/
-	
-	cv::RNG rng(12345); // warning, it's a class
-	
-	std::vector<cv::Scalar> random_color(n_hands);
+	//_____________________________ generate random color and color mask _____________________________//
 	std::vector<cv::Mat> img_ROI_color(n_hands);
 	
-	for (int i=0; i<n_hands; i++) 
-	{
-        random_color[i] = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
-        std::cout << "Random color " << random_color[i] << std::endl;
-        
-        cv::cvtColor(mask_final_ROI[i], img_ROI_color[i], cv::COLOR_GRAY2RGB);
-	}
+	std::vector<cv::Scalar> randColor(n_hands);
 	
-	
-	//______________ color the mask moltiplicando ogni singolo canale con rispettivo colore ________________//
-    
-    cv::Mat maskPOL;
-    cv::inRange(img_ROI_color[0], cv::Scalar(255, 255, 255), cv::Scalar(255, 255, 255), maskPOL);
-    img_ROI_color[0].setTo(random_color[0], maskPOL);
-	
-	for(int i=0; i<img_ROI_color[0].rows; i++) {
-        for(int j=0; j<img_ROI_color[0].cols; j++) {
-            if(mask_final_ROI[0].at<uchar>(i,j) == 255) {
-                img_ROI_color[0].at<cv::Vec3b>(i,j)[0] = random_color[0][0];
-                img_ROI_color[0].at<cv::Vec3b>(i,j)[1] = random_color[0][1];
-                img_ROI_color[0].at<cv::Vec3b>(i,j)[2] = random_color[0][2];
-            }
-        }
-	}
-	
-	for(int i=0; i<img_ROI_color[1].rows; i++) {
-        for(int j=0; j<img_ROI_color[1].cols; j++) {
-            if(mask_final_ROI[1].at<uchar>(i,j) == 255) {
-                img_ROI_color[1].at<cv::Vec3b>(i,j)[0] = random_color[1][0];
-                img_ROI_color[1].at<cv::Vec3b>(i,j)[1] = random_color[1][1];
-                img_ROI_color[1].at<cv::Vec3b>(i,j)[2] = random_color[1][2];
-            }
-        }
-	}
-	
-    cv::namedWindow("Final random");
-	cv::imshow("Final random", img_ROI_color[0]);
-	cv::waitKey(0);
-	
-    cv::namedWindow("Final random");
-	cv::imshow("Final random", img_ROI_color[1]);
-	cv::waitKey(0);
-	
+	randomColorMask(mask_final_ROI, img_ROI_color, randColor, n_hands);
 	
 	//____________________ Inserisci maschera immagine colorata in immagine nera stessa dimensione originale _____________________//
 	cv::Mat mask_color_final(img.rows, img.cols, CV_8UC3, cv::Scalar::all(0)); 
+	insertColorMask(img, img_ROI_color, mask_color_final, coordinates_bb, n_hands);
 	
-	// metto ROI colorata in immagine nera stesse dimensioni originale
-	cv::Mat mask_color_OriginalDim1(img.rows, img.cols, CV_8UC3, cv::Scalar::all(0));
-	cv::Mat mask_color_OriginalDim2(img.rows, img.cols, CV_8UC3, cv::Scalar::all(0));
 	
-	img_ROI_color[0].copyTo(mask_color_OriginalDim1(cv::Rect(coordinates_bb[0], coordinates_bb[1], img_ROI_color[0].cols, img_ROI_color[0].rows)));
-	img_ROI_color[1].copyTo(mask_color_OriginalDim2(cv::Rect(coordinates_bb[4], coordinates_bb[5], img_ROI_color[1].cols, img_ROI_color[1].rows)));
+	//_________________________________________ parte 2 watershed _________________________________________//
 	
-	cv::bitwise_or(mask_color_OriginalDim1, mask_color_OriginalDim2, mask_color_final);
 	
-	cv::namedWindow("Mask final");
-    cv::imshow("Mask final", mask_color_final);
+	cv::cvtColor(mask_final, mask_final, cv::COLOR_GRAY2BGR);
+	
+	//apply the watershed algorithm
+    cv::Mat result = mask_final.clone();
+    cv::watershed(result, markers);
+    cv::Mat mark;
+    markers.convertTo(mark, CV_8U);
+    cv::bitwise_not(mark, mark);
+
+    //generate random colors
+    cv::RNG rng (12345);
+    std::vector<cv::Vec3b> colors;
+    for(int i=0; i<ncomp; ++i) {
+        uchar b = static_cast<uchar>(rng.uniform(0, 255));
+        uchar g = static_cast<uchar>(rng.uniform(0, 255));
+        uchar r = static_cast<uchar>(rng.uniform(0, 255));
+        //insert new color
+        colors.push_back(cv::Vec3b(b, g, r));
+    }
+    
+    
+    
+    cv::Mat output = mask_final.clone();
+    
+	cv::namedWindow("Mask tram");
+    cv::imshow("Mask tram", output);
+	cv::waitKey(0);
+
+    //create output image
+    for(int i=0; i<markers.rows; ++i) {
+        for(int j=0; j<markers.cols; ++j) {
+            int index = markers.at<int>(i, j);
+            if(index > 0 && index <= ncomp) {
+                output.at<cv::Vec3b>(i, j) = colors[index-1];
+            }
+        }
+    }
+    
+	cv::namedWindow("transform");
+    cv::imshow("transform", output);
 	cv::waitKey(0);
 	
-	cv::destroyAllWindows();
 	
 	//____________________ Unisci maschera con immagine di partenza _____________________//
+	
+	// quando pixel diverso da zero, vuol dire che ho maschera mano, quindi sostituisco pixel
 	for(int i=0; i<img.rows; i++) {
         for(int j=0; j<img.cols; j++) {
             if(mask_color_final.at<cv::Vec3b>(i,j)[0] != 0 && mask_color_final.at<cv::Vec3b>(i,j)[1] != 0 && mask_color_final.at<cv::Vec3b>(i,j)[2] != 0) {
@@ -425,6 +465,8 @@ int main(int argc, char* argv[])
 	cv::namedWindow("Image final");
     cv::imshow("Image final", img);
 	cv::waitKey(0);
+	
+	cv::imwrite("../results/resultsSegmentation/colored" + image_number + ".png", img);
 	
 	/*
 	
