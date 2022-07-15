@@ -28,7 +28,7 @@ make
 <th> Lab 4 - Edge Detection </th>
 </tr>
 <tr>
-<td width="300px">
+<td width="25%">
 <ul>
   <li>OpenCV Hello World</li>
   <li>Dealing with the image channels and Chessboard creation</li>
@@ -36,7 +36,7 @@ make
 </ul>
 </td>
   
-<td width="300px">
+<td width="25%">
 <ul>
   <li>Gray-scale convertion</li>
   <li>Implementation of max/min, Median and Gaussian filters</li>
@@ -44,7 +44,7 @@ make
 </ul>
 </td>
   
-<td width="300px">
+<td width="25%">
 <ul>
   <li>Callback functions on mouse click</li>
   <li>Image segmentation and mask</li>
@@ -52,7 +52,7 @@ make
 </ul>
 </td>
   
-<td width="300px">
+<td width="25%">
 <ul>
   <li>Canny edge detector and trackbars</li>
   <li>Hough transform for lines</li>
@@ -68,7 +68,7 @@ make
 <th> Lab 8 - Camera Calibration </th>
 </tr>
 <tr>
-<td width="300px">
+<td width="25%">
 <ul>
   <li>Otsu's optimal threshold (Histogram based)</li>
   <li>Region growing method and Watershed transformation</li>
@@ -76,7 +76,7 @@ make
 </ul>
 </td>
   
-<td width="300px">
+<td width="25%">
 <ul>
   <li>Evaluating features on images</li>
   <li>Matching features between images</li>
@@ -84,7 +84,7 @@ make
 </ul>
 </td>
   
-<td width="300px">
+<td width="25%">
   <ul>
   <li>Creation of a panorama by merging together a set of images</li>
   <li>Cylindrical projection and SIFT feature extraction</li>
@@ -92,7 +92,7 @@ make
 </ul>
 </td>
   
-<td width="300px">
+<td width="25%">
 <ul>
   <li>Get calibration images using a camera</li>
   <li>Calibrates the camera using the points of the pattern</li>
