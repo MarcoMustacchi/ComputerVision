@@ -23,6 +23,7 @@
 #include "randomColorMask.h" 
 #include <opencv2/dnn/dnn.hpp>
 #include "write_to_file.h"
+#include "fillMaskHoles.h" 
 
 
 using namespace cv;
@@ -266,6 +267,47 @@ void detection(cv::Mat& img)
 	}
 	else {
 	    cout << "Grayscale image" << endl;
+	    
+	    Mat img_threshold_adap;
+	    Mat img_threshold_adap_inv;
+	    
+	    cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+	    
+	    cv::adaptiveThreshold(img, img_threshold_adap, 255, cv::ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 1);
+	    
+    	cv::namedWindow(" Image");
+	    cv::imshow(" Image", img_threshold_adap);
+	    
+	    img_threshold_adap_inv = ~img_threshold_adap;
+	    
+    	cv::namedWindow("Thresh ");
+	    cv::imshow("Thresh ", img_threshold_adap_inv);
+	    
+    	cv::namedWindow("All ");
+	    cv::imshow("All ", img_threshold_adap_inv);
+	    
+	    
+	    cv::Mat teso;
+	    fillMaskHoles(img_threshold_adap_inv, teso);
+	    
+    	cv::namedWindow("teso ");
+	    cv::imshow("teso ", teso);
+	    
+	    cv::Mat erode;
+	    
+        cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7,7));
+             
+        cv::morphologyEx(teso, erode, cv::MORPH_ERODE, kernel);
+        
+    	cv::namedWindow("erode ");
+	    cv::imshow("erode ", erode);
+	    
+	    removeDetectionOutliers(erode);
+	    
+	    
+	    
+	    cv::waitKey(0);
+	    
 	}
 	
     cvtColor(img, img, COLOR_BGR2YCrCb);
@@ -502,7 +544,7 @@ void detection(cv::Mat& img)
     std::vector<std::vector<int>> new_coordinates_bb;
     nonMaximumSuppression(coordinates_bb, new_coordinates_bb);
     
-    
+        
     cout << "remaining coordinates" << endl;
     
   	// Displaying the 2D vector
@@ -511,6 +553,45 @@ void detection(cv::Mat& img)
         for (int j = 0; j < new_coordinates_bb[i].size(); j++)
             cout << new_coordinates_bb[i][j] << " ";
         cout << endl;
+    }
+    
+    //_____________ remove Bounding Box if is fully inside another one (non Maximum Suppression doesn't remove it) _____________//
+    std::vector<int> indices;
+    
+    for (int i=0; i<new_coordinates_bb.size(); i++) 
+    {
+        for (int j=0; j<new_coordinates_bb.size(); j++) 
+        {
+            if (new_coordinates_bb[i] == new_coordinates_bb[j]) // altrimenti stesso rettangolo confrontato con se stesso risulta inside
+            {
+                continue;
+            }
+            
+            cv::Rect a(new_coordinates_bb[i][0], new_coordinates_bb[i][1], new_coordinates_bb[i][2], new_coordinates_bb[i][3]);
+            cv::Rect b(new_coordinates_bb[j][0], new_coordinates_bb[j][1], new_coordinates_bb[j][2], new_coordinates_bb[j][3]);
+                        
+            if ((a & b) == a) // means that b is inside a
+            {
+                cout << "Inside " << i << endl;
+                
+                indices.push_back(i);   // sembra funzionare, ma a logica non dovrebbe essere j? visto che a contiene b?
+            }
+        }
+    }
+    
+    // attenzione, perche' in questo modo se piu' rettangoli contengono lo stesso rettangolo, devo rimuovere tutti gli indici uguali,
+    // altrimenti rimuovo piu' volte
+    
+    sort( indices.begin(), indices.end() );
+    indices.erase( unique( indices.begin(), indices.end() ), indices.end() );
+    
+    for (int j = 0; j < indices.size(); j++)
+        cout << indices[j] << " ";
+
+    
+    for (int i=0; i<indices.size(); i++) 
+    {
+        new_coordinates_bb.erase(new_coordinates_bb.begin()+indices[i]);
     }
     
     
