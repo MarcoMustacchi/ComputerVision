@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
                 std::cout << "Result" << std::endl;
                 cv::namedWindow("Image");
                 cv::imshow("Image", img);
-                cv::waitKey(0);  
+                cv::waitKey(10000);  
                 
                 cv::destroyAllWindows(); 
                 
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
                 
                 cv::namedWindow("Image");
                 cv::imshow("Image", img);
-                cv::waitKey(0); 
+                cv::waitKey(10000); 
                 
                 cv::destroyAllWindows();
                 

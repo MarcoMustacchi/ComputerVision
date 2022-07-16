@@ -24,6 +24,8 @@ add_executable( ${PROJECT_NAME}
                 ${SRC_FILES}/main.cpp
                 ${HEADER_FILES}/detection.h
                 ${SRC_FILES}/detection.cpp
+                ${HEADER_FILES}/Detector.h
+                ${LIB_FILES}/Detector.cpp
                 ${HEADER_FILES}/segmentationCanny.h
                 ${SRC_FILES}/segmentationCanny.cpp
                 ${HEADER_FILES}/iou.h
