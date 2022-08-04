@@ -105,4 +105,4 @@ make
 
 ## Computer Vision - Summer Project
 ### Human hands detection and segmentation - Result example
-<img src="https://github.com/MarcoMustacchi/ComputerVision/blob/master/Project/Dataset/rgb/07.jpg" width="33%"/> <img src="https://github.com/MarcoMustacchi/ComputerVision/blob/master/Project/results/resultsDetection/Color/07.jpg" width="33%"/> <img src="https://github.com/MarcoMustacchi/ComputerVision/blob/master/Project/results/resultsSegmentation/Color/07.jpg" width="33%"/> 
+<img src="https://github.com/MarcoMustacchi/ComputerVision/blob/master/Project/Dataset/rgb/07.jpg" width="30%"/> <img src="https://github.com/MarcoMustacchi/ComputerVision/blob/master/Project/results/resultsDetection/Color/07.jpg" width="30%"/> <img src="https://github.com/MarcoMustacchi/ComputerVision/blob/master/Project/results/resultsSegmentation/Color/07.jpg" width="30%"/> 
