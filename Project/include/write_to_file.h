@@ -1,3 +1,13 @@
+
+/**
+ * @file write_to_file.h
+ *
+ * @brief  write_to_file Header file
+ *
+ * @author Marco Mustacchi
+ *
+ */
+
 #ifndef WRITE2FILE_H
 #define WRITE2FILE_H
 

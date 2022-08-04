@@ -1,4 +1,13 @@
 
+/**
+ * @file fillMaskHoles.cpp
+ *
+ * @brief  Fill holes inside a mask
+ *
+ * @author Marco Mustacchi
+ *
+ */
+
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -15,17 +24,12 @@ void fillMaskHoles(const cv::Mat& input, cv::Mat& output) {
     // Bottom Right Corner
     cv::Point p2(input.cols, input.rows); // for rectangle rows and cols inverted
   
-    
     int thickness = 2;
     // Drawing the Rectangle
     rectangle(input, p1, p2,
               cv::Scalar(0),
               thickness, cv::LINE_8);
-        
-    cv::imshow("corrected", input);
-    cv::waitKey(0);   
-    
-    
+       
     cv::Mat im_floodfill = input.clone();
     floodFill(im_floodfill, cv::Point(0,0), cv::Scalar(255));
     
@@ -35,9 +39,5 @@ void fillMaskHoles(const cv::Mat& input, cv::Mat& output) {
 
     // Combine the two images to get the foreground.
     output = input + im_floodfill_inv;
-
-    // Display images
-    cv::imshow("Foreground", output);
-    cv::waitKey(0);
     
 }

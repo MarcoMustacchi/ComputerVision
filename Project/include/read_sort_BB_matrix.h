@@ -1,3 +1,13 @@
+
+/**
+ * @file read_sort_BB_matrix.h
+ *
+ * @brief  read_sort_BB_matrix Header file
+ *
+ * @author Marco Mustacchi
+ *
+ */
+
 #ifndef READBBMATRIX_H
 #define READBBMATRIX_H
 

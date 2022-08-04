@@ -1,13 +1,21 @@
+
+/**
+ * @file main.cpp
+ *
+ * @brief  main: menu for choosing what to do
+ *
+ * @author Marco Mustacchi
+ *
+ */
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <fstream>
-
 #include "detection.h"
-#include "segmentationCanny.h"
-// #include "segmentationOtsu.h"
+#include "segmentationMethods.h"
 #include "iou.h"
 #include "pixel_accuracy.h"
 
@@ -44,28 +52,26 @@ int main(int argc, char* argv[])
                 
                 detection(img);
                 
-                std::cout << "Result" << std::endl;
+                std::cout << "End Detection" << std::endl;
                 cv::namedWindow("Image");
                 cv::imshow("Image", img);
-                cv::waitKey(10000);  
+                cv::waitKey(0);  
                 
                 cv::destroyAllWindows(); 
                 
-                break;
-                
-                
+                break;  
             }
             
             case 1:
             {
                 std::cout << "Segmentation is starting" << std::endl;
                 
-                segmentationCanny(img);
-                // segmentationOtsu(img);
+                segmentationMethods(img);
                 
+                std::cout << "End Segmentation" << std::endl;
                 cv::namedWindow("Image");
                 cv::imshow("Image", img);
-                cv::waitKey(10000); 
+                cv::waitKey(0); 
                 
                 cv::destroyAllWindows();
                 
@@ -78,10 +84,6 @@ int main(int argc, char* argv[])
                 
                 iou(img);
                 
-                cv::namedWindow("Image");
-                cv::imshow("Image", img);
-                cv::waitKey(0); 
-                
                 cv::destroyAllWindows();
                 
                 break;
@@ -92,10 +94,6 @@ int main(int argc, char* argv[])
                 std::cout << "Performance Segmentation is starting" << std::endl;
 
                 pixel_accuracy();
-                
-                cv::namedWindow("Image");
-                cv::imshow("Image", img);
-                cv::waitKey(0); 
                 
                 cv::destroyAllWindows();
                 
@@ -114,7 +112,6 @@ int main(int argc, char* argv[])
                 std::cout << "Wrong number inserted. Retry" << std::endl;
                 
                 break;
-            
             }   
         
         }

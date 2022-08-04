@@ -1,3 +1,13 @@
+
+/**
+ * @file removeOutliers.h
+ *
+ * @brief  removeOutliers Header file
+ *
+ * @author Marco Mustacchi
+ *
+ */
+
 #ifndef REMOVEOUTLIERS_H
 #define REMOVEOUTLIERS_H
 

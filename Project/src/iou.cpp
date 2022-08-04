@@ -1,7 +1,8 @@
+
 /**
  * @file iou.cpp
  *
- * @brief  Intersection over Union
+ * @brief  Performance evaluation: Intersection over Union
  *
  * @author Marco Mustacchi
  *
@@ -43,7 +44,6 @@ float bb_intersection_over_union(int x_truth, int y_truth, int width_truth, int 
 }
 
 
-
 void iou(cv::Mat& img)
 {
             
@@ -63,21 +63,24 @@ void iou(cv::Mat& img)
     
     std::string filename_dataset = "../Dataset/det/" + image_number + ".txt";
 
-    std::vector<std::vector<int>> coord_bb_truth;
+    std::vector<std::vector<int> > coord_bb_truth;
     
     coord_bb_truth = read_sort_BB_matrix(filename_dataset);
     
     int n_hands = coord_bb_truth.size(); // return number of rows
-    std::cout << "Number of hands detected are " << n_hands << std::endl;
-    
+    std::cout << "Number of hands ground truth are " << n_hands << std::endl;
     
     //___________________________ Load Predicted bounding box coordinates ___________________________ //
     
-    std::string filename_predict = "../results/resultsDetection/" + image_number + ".txt";
+    std::string filename_predict = "../results/resultsDetection/BoundingBoxes/" + image_number + ".txt";
 
-    std::vector<std::vector<int>> coord_bb_predict;
+    std::vector<std::vector<int> > coord_bb_predict;
     
     coord_bb_predict = read_sort_BB_matrix(filename_predict);
+    
+    
+    int n_hands_predict = coord_bb_predict.size(); // return number of rows
+    std::cout << "Number of hands predicted are " << n_hands_predict << std::endl;
     
     //___________________________ Draw Ground Thruth Bounding Boxes ___________________________ //
     
@@ -91,50 +94,96 @@ void iou(cv::Mat& img)
     
     std::ofstream myfile("../results/performanceDetection/" + image_number + ".txt", std::ofstream::trunc); // to OverWrite text file
     
-    for (int i=0; i<n_hands; i++) 
-    {
-        
-        //_________ Draw Ground Thruth Bounding Boxes _________//
-    	x_truth = coord_bb_truth[i][0];
-        y_truth = coord_bb_truth[i][1];
-        width_truth = coord_bb_truth[i][2];
-        height_truth = coord_bb_truth[i][3];
+    int mode = 0;
     
-    	cv::Point pt1(x_truth, y_truth);
-        cv::Point pt2(x_truth + width_truth, y_truth + height_truth);
-        cv::rectangle(img, pt1, pt2, cv::Scalar(0, 255, 0));
-    
-        // _________ Draw Detected Bounding Boxes _________//
-    	x_predict = coord_bb_predict[i][0];
-        y_predict = coord_bb_predict[i][1];
-        width_predict = coord_bb_predict[i][2];
-        height_predict = coord_bb_predict[i][3];
-        
-        cv::Point pt3(x_predict, y_predict);
-        cv::Point pt4(x_predict + width_predict, y_predict + height_predict);
-        cv::rectangle(img, pt3, pt4, cv::Scalar(0, 0, 255));
-        
-        // _________ Compute IoU measurements _________//
-    	iou = bb_intersection_over_union(x_truth, y_truth, width_truth, height_truth, x_predict, y_predict, width_predict, height_predict);
-    	myfile << iou << std::endl;
-    	std::cout << "IoU bounding box " << i+1 << " is: " << iou << std::endl;
-    
-    }
-    
-    myfile.close();
+    if (n_hands >= n_hands_predict)
+		mode = 1;
+	else 
+		mode = 2;
+		
+			
+	switch (mode)
+	{
+		case 1:
+			for (int i=0; i<n_hands_predict; i++) 
+   			{
+		    	float max = 0.0f;
+		    	int index = 0;
+		    			    	
+		    	for (int j=0; j<n_hands; j++) 
+		        {
+		        	// _________ Draw Detected Bounding Boxes _________//
+			    	x_predict = coord_bb_predict[i][0];
+			        y_predict = coord_bb_predict[i][1];
+			        width_predict = coord_bb_predict[i][2];
+			        height_predict = coord_bb_predict[i][3];
+			        
+		        	//_________ Draw Ground Thruth Bounding Boxes _________//
+			    	x_truth = coord_bb_truth[j][0];
+			        y_truth = coord_bb_truth[j][1];
+			        width_truth = coord_bb_truth[j][2];
+			        height_truth = coord_bb_truth[j][3];
 
-    cv::namedWindow("New Image");
-    cv::imshow("New Image", img);
-    cv::waitKey(0);
-    
-    //_________________ Disegno rettangolo blu nell'intersezione bounding box _________________//
-    cv::Point pt5(656, 325);
-    cv::Point pt6(774, 433);
-    cv::rectangle(img, pt5, pt6, cv::Scalar(255, 0, 0));
-    
-    cv::namedWindow("New Image");
-    cv::imshow("New Image", img);
-    cv::waitKey(0);
+			        // _________ Compute IoU measurements _________//
+			    	iou = bb_intersection_over_union(x_truth, y_truth, width_truth, height_truth, x_predict, y_predict, width_predict, height_predict);
+			    	
+			    	if ( iou > max )
+			    	{
+			   			index = j;
+			   			max = iou;
+					}
+		        }
+		        
+			    myfile << max << std::endl;
+				std::cout << "IoU bounding box " << i+1 << " is: " << max << std::endl;   
+		        coord_bb_truth.erase(coord_bb_truth.begin()+index);
+		        n_hands = n_hands - 1;
+		        
+	    	}
+	    	
+	    	break;
+			
+		case 2:
+			for (int i=0; i<n_hands; i++) 
+   			{
+		    	float max = 0.0f;
+		    	int index = 0;
+		    			    	
+		    	for (int j=0; j<n_hands_predict; j++) 
+		        {
+		        	//_________ Draw Ground Thruth Bounding Boxes _________//
+			    	x_truth = coord_bb_truth[i][0];
+			        y_truth = coord_bb_truth[i][1];
+			        width_truth = coord_bb_truth[i][2];
+			        height_truth = coord_bb_truth[i][3];
+			    
+			        // _________ Draw Detected Bounding Boxes _________//
+			    	x_predict = coord_bb_predict[j][0];
+			        y_predict = coord_bb_predict[j][1];
+			        width_predict = coord_bb_predict[j][2];
+			        height_predict = coord_bb_predict[j][3];
+			        
+			        // _________ Compute IoU measurements _________//
+			    	iou = bb_intersection_over_union(x_truth, y_truth, width_truth, height_truth, x_predict, y_predict, width_predict, height_predict);
+			    	
+			    	if ( iou > max )
+			    	{
+			   			index = j; 
+			   			max = iou;
+					}
+		        }
+		        
+		        myfile << max << std::endl;
+				std::cout << "IoU bounding box " << i+1 << " is: " << max << std::endl;  
+		        coord_bb_predict.erase(coord_bb_predict.begin()+index);
+		        n_hands_predict = n_hands_predict - 1;
+	    	}
+	    	
+	    	break;
+			
+	}
+	
+	myfile.close();
   
 }
 

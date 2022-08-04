@@ -1,3 +1,13 @@
+
+/**
+ * @file fillMaskHoles.h
+ *
+ * @brief  fillMaskHoles Header file
+ *
+ * @author Marco Mustacchi
+ *
+ */
+
 #ifndef FILLMASKHOLES_H
 #define FILLMASKHOLES_H
 

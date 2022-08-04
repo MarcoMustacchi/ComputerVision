@@ -26,8 +26,12 @@ add_executable( ${PROJECT_NAME}
                 ${SRC_FILES}/detection.cpp
                 ${HEADER_FILES}/Detector.h
                 ${LIB_FILES}/Detector.cpp
-                ${HEADER_FILES}/segmentationCanny.h
-                ${SRC_FILES}/segmentationCanny.cpp
+                ${HEADER_FILES}/segmentationMethods.h
+                ${SRC_FILES}/segmentationMethods.cpp
+                ${HEADER_FILES}/segmentationAlgorithm.h
+                ${LIB_FILES}/segmentationAlgorithm.cpp
+                ${HEADER_FILES}/Segmentator.h
+                ${LIB_FILES}/Segmentator.cpp
                 ${HEADER_FILES}/iou.h
                 ${SRC_FILES}/iou.cpp
                 ${HEADER_FILES}/pixel_accuracy.h
@@ -40,10 +44,6 @@ add_executable( ${PROJECT_NAME}
                 ${LIB_FILES}/removeOutliers.cpp
                 ${HEADER_FILES}/fillMaskHoles.h
                 ${LIB_FILES}/fillMaskHoles.cpp
-                ${HEADER_FILES}/insertMask.h
-                ${LIB_FILES}/insertMask.cpp
-                ${HEADER_FILES}/randomColorMask.h
-                ${LIB_FILES}/randomColorMask.cpp
               )  # be sure there's exactly one main() function in the source files
 #target_include_directories( ${PROJECT_NAME} PUBLIC ${HEADER_FILES}/filters.h) # attenzione, viene letto sequenziale, target_include_directories must be defined after the add_executable
 target_link_libraries( ${PROJECT_NAME} PUBLIC ${OpenCV_LIBS} )

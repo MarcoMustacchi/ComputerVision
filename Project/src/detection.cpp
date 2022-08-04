@@ -19,8 +19,6 @@
 #include "read_sort_BB_matrix.h"
 #include "removeOutliers.h"
 #include "fillMaskHoles.h"
-#include "insertMask.h"  
-#include "randomColorMask.h" 
 #include <opencv2/dnn/dnn.hpp>
 #include "write_to_file.h"
 #include "fillMaskHoles.h" 
@@ -55,23 +53,23 @@ void detection(cv::Mat& img)
 	
 	cv::Mat img_threshold;
 	
+	int maxArea;
+	
 	if (detect.imgGrayscale(img) == false) 
 	{
 	    cout << "Color image" << endl;
 	    cvtColor(img, img, COLOR_BGR2YCrCb);
-	    detect.skinDetectionColored(img, img_threshold);
+	    maxArea = detect.skinDetectionColored(img, img_threshold);
 	    cvtColor(img, img, COLOR_YCrCb2BGR);
+	    // GaussianBlur(img, img, Size(3, 3), 0, 0, BORDER_DEFAULT);
 	}
 	else {
 		
 	    cout << "Grayscale image" << endl;
 	    cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
-	    detect.skinDetectionGrayscale(img, img_threshold);   
+	    maxArea = detect.skinDetectionGrayscale(img, img_threshold);   
 	    cv::cvtColor(img, img, cv::COLOR_GRAY2BGR);
-	    
-    	cv::namedWindow("mage");
-	    cv::imshow("mage", img);
-	    cv::waitKey(0);
+	    // GaussianBlur(img, img, Size(3, 3), 0, 0, BORDER_DEFAULT);
 	}   
 			
 		
@@ -84,18 +82,18 @@ void detection(cv::Mat& img)
 	// La sliding window size deve dipendere dalla dimensione dell'immagine originale
 	// get if cols or row is min
 	if (img.rows < img.cols) {
-	    windows_n_rows_BIG = img.rows * 0.5;
+	    windows_n_rows_BIG = img.rows * 0.4;
 	    windows_n_cols_BIG = img.rows * 0.5;
         windows_n_rows_SMALL = img.rows * 0.25;
         windows_n_cols_SMALL = img.rows * 0.25;
 	}
 	else
 	{
-	    windows_n_rows_BIG = img.cols * 0.5;
+	    windows_n_rows_BIG = img.cols * 0.4;
 	    windows_n_cols_BIG = img.cols * 0.5;
         windows_n_rows_SMALL = img.cols * 0.25;
         windows_n_cols_SMALL = img.cols * 0.25;
-	}
+    }
     
     //Compute the Stride for the Rows and Cols
     int stepSlideRow_BIG = windows_n_rows_BIG * 0.25;
@@ -112,23 +110,40 @@ void detection(cv::Mat& img)
 	    {
 	        case 0:
 		    {    
-		        cout << "Starting Case 0" << endl;
 		        
-		        //__________________________ Sliding window approach __________________________//
-		        detect.slidingWindow(img, img_threshold, windows_n_rows_BIG, windows_n_cols_BIG, stepSlideRow_BIG, stepSlideCols_BIG, coordinates_bb);
-
-                break;     
+		        if ( (img.cols>=1280 && img.rows>=720 && (maxArea>75000 || maxArea<8000)) || (img.cols<1280 && img.rows<720 && maxArea>1000 && maxArea<6000) )
+		        {
+		           break;
+		        }
+		        else
+		        {
+	                cout << "Starting Case 0" << endl;
+		        
+		            //__________________________ Sliding window approach __________________________//
+		            detect.slidingWindow(img, img_threshold, windows_n_rows_BIG, windows_n_cols_BIG, stepSlideRow_BIG, stepSlideCols_BIG, coordinates_bb, maxArea);
+		            
+	                break;  
+                }
+                   
             }
             
             case 1:
             {
             
-                cout << "Starting Case 1" << endl;
-                
-                //__________________________ Sliding window approach __________________________//
-                detect.slidingWindow(img, img_threshold, windows_n_rows_SMALL, windows_n_cols_SMALL, stepSlideRow_SMALL, stepSlideCols_SMALL, coordinates_bb);
-                
-                break;
+		        if ( img.cols<1280 && img.rows<720 && (maxArea<1000 || maxArea>6000) )
+		        {
+		           break;
+		        }
+		        else
+		        {
+                    cout << "Starting Case 1" << endl;
+                    
+                    //__________________________ Sliding window approach __________________________//
+                    detect.slidingWindow(img, img_threshold, windows_n_rows_SMALL, windows_n_cols_SMALL, stepSlideRow_SMALL, stepSlideCols_SMALL, coordinates_bb, maxArea);
+                    
+                    break;
+                }
+            
             }
 	    }
     }
@@ -147,8 +162,7 @@ void detection(cv::Mat& img)
     std::vector<std::vector<int>> new_coordinates_bb;
     detect.nonMaximumSuppression(coordinates_bb, new_coordinates_bb);
     
-        
-    cout << "remaining coordinates" << endl;
+    cout << "Remaining coordinates after nonMaximumSuppression" << endl;
     
   	// Displaying the 2D vector
     for (int i = 0; i < new_coordinates_bb.size(); i++) 
@@ -158,44 +172,48 @@ void detection(cv::Mat& img)
         cout << endl;
     }
     
-    //_____________ remove Bounding Box if is fully inside another one (non Maximum Suppression doesn't remove it) _____________//
-    std::vector<int> indices;
+    //__________________________________________ Handle BoundingBoxes Inside since Non Maximum Suppression can not __________________________________________//
+       
+    detect.handleBoundingBoxesInside(new_coordinates_bb);
+        
+    // detect.joinBoundingBoxesHorizontally(new_coordinates_bb);
+    // detect.joinBoundingBoxesVertically(new_coordinates_bb);
     
-    for (int i=0; i<new_coordinates_bb.size(); i++) 
+    cout << "Remaining coordinates after joining Bounding Boxes" << endl;
+    
+  	// Displaying the 2D vector
+    for (int i = 0; i < new_coordinates_bb.size(); i++) 
     {
-        for (int j=0; j<new_coordinates_bb.size(); j++) 
-        {
-            if (new_coordinates_bb[i] == new_coordinates_bb[j]) // altrimenti stesso rettangolo confrontato con se stesso risulta inside
-            {
-                continue;
-            }
-            
-            cv::Rect a(new_coordinates_bb[i][0], new_coordinates_bb[i][1], new_coordinates_bb[i][2], new_coordinates_bb[i][3]);
-            cv::Rect b(new_coordinates_bb[j][0], new_coordinates_bb[j][1], new_coordinates_bb[j][2], new_coordinates_bb[j][3]);
-                        
-            if ((a & b) == a) // means that b is inside a
-            {
-                cout << "Inside " << i << endl;               
-                indices.push_back(i);   // sembra funzionare, ma a logica non dovrebbe essere j? visto che a contiene b?
-            }
-        }
+        for (int j = 0; j < new_coordinates_bb[i].size(); j++)
+            cout << new_coordinates_bb[i][j] << " ";
+        cout << endl;
     }
     
-    // attenzione, perche' in questo modo se piu' rettangoli contengono lo stesso rettangolo, devo rimuovere tutti gli indici uguali,
-    // altrimenti rimuovo piu' volte
+    detect.deleteRedundantBB(img, new_coordinates_bb);
     
-    sort( indices.begin(), indices.end() );
-    indices.erase( unique( indices.begin(), indices.end() ), indices.end() );
+    cout << "Remaining coordinates after removing redundant Bounding Boxes" << endl;
     
-    for (int j = 0; j < indices.size(); j++)
-        cout << indices[j] << " ";
-
-    
-    for (int i=0; i<indices.size(); i++) 
+  	// Displaying the 2D vector
+    for (int i = 0; i < new_coordinates_bb.size(); i++) 
     {
-        new_coordinates_bb.erase(new_coordinates_bb.begin()+indices[i]);
+        for (int j = 0; j < new_coordinates_bb[i].size(); j++)
+            cout << new_coordinates_bb[i][j] << " ";
+        cout << endl;
     }
     
+    detect.joinBoundingBoxesHorizontally(new_coordinates_bb);
+    
+    detect.deleteAlignBB(new_coordinates_bb);
+    
+    cout << "Remaining coordinates after removing aligned Bounding Boxes" << endl;
+    
+  	// Displaying the 2D vector
+    for (int i = 0; i < new_coordinates_bb.size(); i++) 
+    {
+        for (int j = 0; j < new_coordinates_bb[i].size(); j++)
+            cout << new_coordinates_bb[i][j] << " ";
+        cout << endl;
+    }
     
     //__________________________________________ Draw random color Bounding Boxes __________________________________________//
 	int n_hands = new_coordinates_bb.size();
@@ -203,10 +221,7 @@ void detection(cv::Mat& img)
     cv::RNG rng(12345); // warning, it's a class
     
     for (int i=0; i<n_hands; i++) 
-	{
-	    std::cout << " X1 " << new_coordinates_bb[i][0] << " Y1 " << new_coordinates_bb[i][1]
-	          << " X2 " << new_coordinates_bb[i][2] << " Y2 " << new_coordinates_bb[i][3] << std::endl;
-      
+	{ 
         cv::Scalar random_color = cv::Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
         
         int x1 = new_coordinates_bb[i][0];
@@ -220,6 +235,9 @@ void detection(cv::Mat& img)
         rectangle(img, p1, p2, random_color, 2, cv::LINE_8);
 	}
 	
+	// save images with bounding boxes
+	cv::imwrite("../results/resultsDetection/Color/" + image_number + ".jpg", img);
+	
 		
 	// Delete last column (confidence) for consistency with ground truth and Write results
 	int columnToDelete = 4;
@@ -231,6 +249,8 @@ void detection(cv::Mat& img)
             new_coordinates_bb[i].erase(new_coordinates_bb[i].begin() + columnToDelete);
         }
     }
+    
+    cout << "Remaining coordinates after removing confidence column" << endl;
     
   	// Displaying the 2D vector
     for (int i = 0; i < new_coordinates_bb.size(); i++) 

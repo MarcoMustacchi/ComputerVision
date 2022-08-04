@@ -1,3 +1,4 @@
+
 /**
  * @file write_to_file.cpp
  *
@@ -16,11 +17,10 @@
 
 void write_results_Detection(const std::vector<std::vector<int>>& new_coordinates_bb, std::string image_number)
 {	
-      
+          
+    std::ofstream myfile("../results/resultsDetection/BoundingBoxes/" + image_number + ".txt", std::ofstream::trunc); // to OverWrite text file
     // std::ofstream myfile;
     // myfile.open("../results/resultsDetection/" + image_number + ".txt");
-    
-    std::ofstream myfile("../results/resultsDetection/" + image_number + ".txt", std::ofstream::trunc); // to OverWrite text file
     std::ostream_iterator<int> output_iterator(myfile, "\t");
     
     for (int i=0; i<new_coordinates_bb.size(); i++) 
@@ -42,6 +42,7 @@ void write_performance_Detection(float value, std::string image_number)
     myfile.close();
     
 }
+
 
 void write_performance_Segmentation(float value, std::string image_number)
 {	

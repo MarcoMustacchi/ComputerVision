@@ -1,7 +1,8 @@
+
 /**
  * @file pixel_accuracy.cpp
  *
- * @brief  Pixel Accuracy
+ * @brief  Performance evaluation: Pixel Accuracy
  *
  * @author Marco Mustacchi
  *
@@ -18,7 +19,7 @@
 
 //_____________________________________________ Functions _____________________________________________//
 
-float compute_pixel_accuracy(cv::Mat mask_true, cv::Mat mask_predict, std::string image_number)
+float compute_pixel_accuracy(const cv::Mat& mask_true, const cv::Mat& mask_predict)
 {
 	
     int rows = mask_true.rows;
@@ -36,8 +37,6 @@ float compute_pixel_accuracy(cv::Mat mask_true, cv::Mat mask_predict, std::strin
     int totArea = rows * cols;
     
     float pixelAccuracy = (float) totCorrect / totArea;
-	
-	write_performance_Segmentation(pixelAccuracy, image_number);
 	
 	return pixelAccuracy;
 	
@@ -63,7 +62,7 @@ void pixel_accuracy()
     
     //___________________________ Load Predicted mask ___________________________ //
 	    
-    cv::Mat mask_predict = cv::imread("../results/mask/" + image_number + ".png", cv::IMREAD_GRAYSCALE);
+    cv::Mat mask_predict = cv::imread("../results/resultsSegmentation/Binary/" + image_number + ".png", cv::IMREAD_GRAYSCALE);
     cv::namedWindow("Predicted mask");
     cv::imshow("Predicted mask", mask_predict);
     cv::waitKey(0);
@@ -71,7 +70,8 @@ void pixel_accuracy()
     int rows = mask_true.rows;
     int cols = mask_true.cols;
     
-    std::cout << "Dim original " << rows << " and " << cols << std::endl;
+    
+    std::cout << "Dim original " << cols << " and " << rows << std::endl;
 
 	
 	// ________________ Final pixel accuracy ________________ //
@@ -79,8 +79,10 @@ void pixel_accuracy()
 	
 	float pixelAccuracy;
 		
-    pixelAccuracy = compute_pixel_accuracy(mask_true, mask_predict, image_number);
+    pixelAccuracy = compute_pixel_accuracy(mask_true, mask_predict);
     std::cout << "Pixel accuracy is: " << pixelAccuracy << std::endl;
+    
+    write_performance_Segmentation(pixelAccuracy, image_number);
     
   
 }
