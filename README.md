@@ -109,8 +109,8 @@ make
 </table>
 
 ## Computer Vision - Summer Project
-
-<a href="https://github.com/MarcoMustacchi/ComputerVision/raw/master/Project/ComputerVision_ProjectReport_Mustacchi_Rizzetto_Violin.pdf">📄Paper</a>
+<a href="https://github.com/MarcoMustacchi/ComputerVision/raw/master/Project/CV_project_summer_2022.pdf">📄Task</a>
+<a href="https://github.com/MarcoMustacchi/ComputerVision/raw/master/Project/ComputerVision_ProjectReport_Mustacchi_Rizzetto_Violin.pdf">📄Report</a>
 
 #### Human hands detection and segmentation - Result example
 <p align="center">
