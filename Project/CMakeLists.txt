@@ -18,5 +18,5 @@ add_executable( ${PROJECT_NAME}
                 lib/fillMaskHoles.cpp
               )  # be sure there's exactly one main() function in the source files
 target_link_libraries( ${PROJECT_NAME} PUBLIC 
-			           ${OpenCV_LIBS} 
-		             )
+			${OpenCV_LIBS} 
+		      )
